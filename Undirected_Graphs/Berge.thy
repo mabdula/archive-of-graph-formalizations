@@ -1960,7 +1960,7 @@ proof-
   moreover have "card ((E \<oplus> E') \<inter> E') = card (E' - E)" unfolding symmetric_diff_def
     by (metis Diff_disjoint Int_Un_distrib2 Un_Diff_Int inf_sup_absorb sup_bot.right_neutral)
   ultimately show "card ((E \<oplus> E') \<inter> E) < card ((E \<oplus> E') \<inter> E')"
-    by (metis assms card_infinite card_less_sym_Diff not_less_zero)
+    by (metis assms card.infinite card_less_sym_Diff not_less_zero)
 qed
 
 lemma one_unbalanced_comp_edges:
@@ -1991,7 +1991,7 @@ lemma matchings_in_diff:
 proof-
   have sym_def: "x \<in> M \<oplus> M' \<Longrightarrow> x \<in> M \<or> x \<in> M' \<and> (x \<in> M \<longrightarrow> x \<notin> M') \<and> (x \<in> M' \<longrightarrow> x \<notin> M)" for x
     unfolding symmetric_diff_def by blast
-  have aneqc: "{a, b} \<noteq> {b, c}" using assms(5) by (metis doubleton_eq_iff)
+  have aneqc: "{a, b} \<noteq> {b, c}" using assms(5)by (metis doubleton_eq_iff)
   hence notbothM: "\<not> ({a, b} \<in> M \<and> {b, c} \<in> M)" using assms(1) unfolding matching_def by fast
   from aneqc
   have notbothM': "\<not> ({a, b} \<in> M' \<and> {b, c} \<in> M')" using assms(2) unfolding matching_def by fast
@@ -2179,7 +2179,7 @@ next
         moreover have vpath_hd_neq_last: "hd vs \<noteq> last vs"
           unfolding vs_def
           using comp_ge_2 comp_works
-          by (metis One_nat_def Suc_1 Suc_le_eq card.insert card_empty distinct.simps(2) empty_set finite.emptyI last_ConsR last_in_set lessI list.exhaust_sel list.simps(15) not_less_iff_gr_or_eq)
+          by (metis One_nat_def Suc_1 Suc_le_eq card.insert card.empty distinct.simps(2) empty_set finite.emptyI last_ConsR last_in_set lessI list.exhaust_sel list.simps(15) not_less_iff_gr_or_eq)
         ultimately have e: "e = {hd vs, last vs}"
           using doubleton_edges component_edges_subset ass(1)
           by fastforce
@@ -2202,7 +2202,7 @@ next
               unfolding vs'_def vs_def
               using comp_works
                 ass(2)
-              by (metis (no_types, hide_lams) One_nat_def Suc_1 Suc_le_eq card_empty comp_ge_2 distinct.simps(2) distinct_edges_of_vpath e edges_of_path.simps(3) empty_set insert_commute lessI list.exhaust_sel not_less_iff_gr_or_eq vs_def)
+              by (metis (no_types, hide_lams) One_nat_def Suc_1 Suc_le_eq card.empty comp_ge_2 distinct.simps(2) distinct_edges_of_vpath e edges_of_path.simps(3) empty_set insert_commute lessI list.exhaust_sel not_less_iff_gr_or_eq vs_def)
             then have "length (filter (\<lambda>x. x \<in> N) (edges_of_path vs')) = card (N \<inter> (component_edges (M \<oplus> M') C))" for N
               using *
               by (simp add: distinct_length_filter)
@@ -2563,7 +2563,7 @@ proof-
     proof(rule ccontr)
       obtain u v vs' where uv: "vs = u # v # vs'"
         using ass
-        by (metis (no_types, hide_lams) card_empty edges_of_path.cases edges_of_path.simps(1) edges_of_path.simps(2) inf_bot_right list.set(1) more_M'_edges nat_neq_iff)
+        by (metis (no_types, hide_lams) card.empty edges_of_path.cases edges_of_path.simps(1) edges_of_path.simps(2) inf_bot_right list.set(1) more_M'_edges nat_neq_iff)
       assume "\<not> hd vs \<notin> Vs M"
       then have "hd vs \<in> Vs M" by simp
       then obtain w e where we: "e = {w, u}" "e \<in> M"
@@ -2922,7 +2922,7 @@ next
   then obtain M' where M': "M' \<subseteq> E" "matching M'" "card M < card M'"
     by blast
   then have finiteM': "finite M'"
-    using card_infinite by force
+    using card.infinite by force
   have MM'_subset: "M \<oplus> M' \<subseteq> E"
     using sym_diff_subset matching(3) M'(1) by fast
   have "\<forall>e \<in> M \<oplus> M'. \<exists>u v. e = {u,v} \<and> u \<noteq> v"
