@@ -116,6 +116,20 @@ proof -
   qed
 qed
 
+lemma partitioned_bipartite_swap:
+  assumes "partitioned_bipartite E A"
+  shows "partitioned_bipartite E (Vs E - A)" 
+proof -
+  have "(graph_invar E)" using assms partitioned_bipartite_def by auto
+  have " (Vs E - A)  \<subseteq> Vs E" 
+    by simp
+  have "Vs E - (Vs E - A) =  A" 
+    by (metis Diff_partition Diff_subset_conv Un_Diff_cancel \<open>Vs E - A \<subseteq> Vs E\<close> assms double_diff partitioned_bipartite_def)
+  then show ?thesis 
+  unfolding partitioned_bipartite_def 
+  by (metis \<open>Vs E - A \<subseteq> Vs E\<close> assms partitioned_bipartite_def)
+qed
+
 lemma reachable_intersection_is_empty:
   assumes "partitioned_bipartite E A"
   shows" \<forall>X \<subseteq> A. reachable E X \<inter> X = {}"
@@ -1118,6 +1132,63 @@ proof
     have "A \<subseteq> Vs E"  using assms unfolding partitioned_bipartite_def by auto
     then show "(\<exists> M. cover_matching E M A)" using assms hall2 
       by (simp add: hall2 \<open>\<forall>X\<subseteq>A. card X \<le> card (reachable E X)\<close> \<open>graph_invar E\<close>)
+  qed
+qed
+
+
+lemma frobeneus_matching:
+ fixes E :: "'a set set"
+ assumes "partitioned_bipartite E A"
+ shows "(\<exists> M. perfect_matching E M) \<longleftrightarrow> (\<forall> X \<subseteq> A. card (reachable E X) \<ge> card X) \<and> ((card A) = card (Vs E - A))"
+proof
+  show " \<exists>M. perfect_matching E M \<Longrightarrow> (\<forall>X\<subseteq>A. card X  \<le> card (reachable E X)) \<and> card A = card (Vs E - A)"
+  proof -
+    assume "\<exists>M. perfect_matching E M"
+    show "(\<forall>X\<subseteq>A. card X  \<le> card (reachable E X)) \<and> card A = card (Vs E - A)"
+    proof
+      obtain M where "perfect_matching E M" using \<open>\<exists>M. perfect_matching E M\<close> by auto
+      then  have "Vs M = Vs E" unfolding perfect_matching_def by auto
+      then have "A \<subseteq> Vs M"
+        using assms partitioned_bipartite_def by fastforce
+      then have "cover_matching E M A"
+        by (meson \<open>perfect_matching E M\<close> cover_matching_def perfect_matching_def)
+      then show "\<forall>X\<subseteq>A. card X  \<le> card (reachable E X)" using assms hall by auto
+      have "card A  \<le> card (reachable E A)"
+        by (simp add: \<open>\<forall>X\<subseteq>A. card X \<le> card (reachable E X)\<close>)
+      have "Vs E - A = reachable E A" by (simp add: assms reachble_bipartite)
+      have "partitioned_bipartite E (Vs E - A)" using assms
+        by (simp add: partitioned_bipartite_swap)
+      then have "cover_matching E M (Vs E - A)"
+        by (metis Diff_subset \<open>Vs M = Vs E\<close> \<open>cover_matching E M A\<close> cover_matching_def)
+      then have "card (Vs E - A) \<le> card (reachable E (Vs E - A))"
+        using hall \<open>partitioned_bipartite E (Vs E - A)\<close> 
+        by blast
+      then have "A = reachable E (Vs E - A)" 
+        using  reachble_bipartite \<open>partitioned_bipartite E (Vs E - A)\<close>
+        by (metis assms double_diff partitioned_bipartite_def subset_refl)
+      show "card A = card (Vs E - A)" 
+        using \<open>A = reachable E (Vs E - A)\<close> \<open>Vs E - A = reachable E A\<close> \<open>card (Vs E - A) \<le> card (reachable E (Vs E - A))\<close> \<open>card A \<le> card (reachable E A)\<close> by fastforce
+    qed
+  qed
+  show " (\<forall>X\<subseteq>A. card X \<le> card (reachable E X)) \<and> card A = card (Vs E - A) \<Longrightarrow> \<exists>M. perfect_matching E M"
+  proof -
+    assume "(\<forall>X\<subseteq>A. card X \<le> card (reachable E X)) \<and> card A = card (Vs E - A)"
+    then  have "\<forall>X\<subseteq>A. card X \<le> card (reachable E X)" by auto
+    then have "\<exists>M. cover_matching E M A" using hall assms by auto
+    then obtain M where "cover_matching E M A" by auto
+    have "card A = card (reachable M A)"
+      by (metis \<open>cover_matching E M A\<close> assms hall_reachable order_refl)
+    have "reachable M A \<subseteq> reachable E A"
+      by (metis Diff_mono Vs_subset \<open>cover_matching E M A\<close> assms cover_matching_def halrewrw order_refl reachble_bipartite)
+    have "Vs E - A = reachable E A" by (simp add: assms reachble_bipartite)
+
+    then have "reachable M A = Vs E - A"
+      by (metis \<open>(\<forall>X\<subseteq>A. card X \<le> card (reachable E X)) \<and> card A = card (Vs E - A)\<close> \<open>card A = card (reachable M A)\<close> \<open>cover_matching E M A\<close> \<open>reachable M A \<subseteq> reachable E A\<close> card_subset_eq cover_matching_def finite_Diff)
+     have " Vs E  = Vs M"
+      by (metis Diff_partition \<open>cover_matching E M A\<close> \<open>reachable M A = Vs E - A\<close> assms halrewrw partitioned_bipartite_def reachble_bipartite)
+
+    then  show "\<exists>M. perfect_matching E M"
+      by (smt (verit) \<open>cover_matching E M A\<close> cover_matching_def perfect_matching_def)
   qed
 qed
 

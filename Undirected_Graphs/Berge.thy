@@ -2841,7 +2841,7 @@ proof-
   also have "... < card (t - s) + card (s - t)"
     by (simp add: assms(1) inf.commute)
   also have "... = card ((t - s) \<union> (s - t))"
-    by (metis assms card_Un_disjoint card_infinite finite_Diff not_less_zero tsstinter)
+    by (metis assms card_Un_disjoint card.infinite finite_Diff not_less_zero tsstinter)
   also have "... = card (t \<oplus> s)" unfolding symmetric_diff_def by simp
   finally show ?thesis .
 qed
