@@ -950,6 +950,115 @@ next
   qed
 qed
 
+lemma inj_cardinality:
+  assumes "finite A"
+  assumes "finite B"
+  assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+  assumes "\<forall>a\<in>A. \<exists>b\<in>B. b \<in> a"
+  shows "card A \<le> card B" using assms(1) assms(2) assms(3) assms(4)
+proof(induct A arbitrary: B)
+  case empty
+  then show ?case by auto
+next
+  case (insert x F)
+  have "\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+    
+    by (simp add: insert.prems(2))
+   have "\<exists>b\<in>B. b \<in> x" 
+     by (simp add: insert.prems(3))
+   then obtain b where "b \<in> B \<and> b \<in> x" by auto
+   then have " \<forall>a\<in>F. b \<notin> a" 
+     using UnionI insert.hyps(2) insert.prems(2) by auto
+   then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
+     using insert.prems(3)
+     by (metis insert_iff)
+   then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
+     by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
+   have "finite (B - {b})" 
+     using insert.prems(1) by blast
+   then  have "card F \<le> card (B - {b})" 
+    using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - {b}. b1 \<in> a\<close> insert.hyps(3) by presburger 
+  then have "card F \<le> card B - 1" 
+    by (metis One_nat_def \<open>b \<in> B \<and> b \<in> x\<close> card.empty card.infinite card.insert card_Diff_singleton card_insert_le diff_is_0_eq' emptyE finite.emptyI infinite_remove)
+  then have "card F + 1 \<le> card B" using assms
+ proof -
+  show ?thesis
+    by (metis (no_types) One_nat_def Suc_leI \<open>b \<in> B \<and> b \<in> x\<close> \<open>card F \<le> card B - 1\<close> add_Suc_right add_leE card_Diff1_less insert.prems(1) nat_arith.rule0 ordered_cancel_comm_monoid_diff_class.le_diff_conv2)
+qed
+    
+    then have "card (insert x F) \<le> card B" 
+      by (simp add: insert.hyps(1) insert.hyps(2))
+  then show ?case by auto
+qed
+
+
+lemma yfsdf:
+  assumes "finite A"
+  assumes "finite B"
+  assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+  assumes "\<forall>a\<in>A. \<exists>b\<in>B. b \<in> a"
+  shows "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a \<and> card A = card C" using assms(1) assms(2) assms(3) assms(4)
+proof(induct A arbitrary: B)
+case empty
+then show ?case by auto
+next
+  case (insert x F)
+  have "\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+    
+    by (simp add: insert.prems(2))
+   have "\<exists>b\<in>B. b \<in> x" 
+     by (simp add: insert.prems(3))
+   then obtain b where "b \<in> B \<and> b \<in> x" by auto
+   then have " \<forall>a\<in>F. b \<notin> a" 
+     using UnionI insert.hyps(2) insert.prems(2) by auto
+   then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
+     using insert.prems(3)
+     by (metis insert_iff)
+   then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
+     by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
+   have "finite (B - {b})" 
+     using insert.prems(1) by blast
+   have "\<exists>C\<subseteq>(B - {b}). \<forall>a\<in>F. \<exists>b\<in>C. b \<in> a  \<and> card F = card C" 
+     using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - {b}. b1 \<in> a\<close> \<open>finite (B - {b})\<close> insert.hyps(3) by presburger
+   then  obtain C where "C\<subseteq>(B - {b}) \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a)  \<and> card F = card C"
+     
+     by (metis card.empty empty_subsetI finite_has_maximal insert.hyps(1))
+   then have "(C \<union> {b}) \<subseteq> B" 
+     using \<open>b \<in> B \<and> b \<in> x\<close> by blast
+   have "\<forall>a\<in>insert x F. \<exists>b\<in> (C \<union> {b}). b \<in> a" 
+     using \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>b \<in> B \<and> b \<in> x\<close> by blast
+   have "card F = card C" 
+     by (simp add: \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close>)
+   
+   have "card (insert x F) = card C + 1" 
+     by (simp add: \<open>card F = card C\<close> insert.hyps(1) insert.hyps(2))
+   
+   then show ?case 
+     by (metis Un_insert_right \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>C \<union> {b} \<subseteq> B\<close> \<open>\<forall>a\<in>insert x F. \<exists>b\<in>C \<union> {b}. b \<in> a\<close> \<open>finite (B - {b})\<close> boolean_algebra_cancel.sup0 card.insert finite_subset insert.hyps(1) insert.hyps(2) subset_Diff_insert)
+ qed
+
+lemma yfsdf1:
+  assumes "finite A"
+  assumes "finite B"
+  assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+  assumes "\<forall>a\<in>A. \<exists>b\<in>B. b \<in> a"
+  shows "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>!b\<in>C. b \<in> a"
+proof(rule ccontr)
+  assume "\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)"
+  then have "\<forall>C\<subseteq>B. \<exists>a\<in>A. \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" by auto
+  have "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a \<and> card A = card C" using assms yfsdf[of A B]
+    by auto
+  then obtain C where "C\<subseteq>B \<and> ( \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a) \<and> card A = card C" 
+    by (meson \<open>\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)\<close>)
+
+
+  then have "\<exists>a\<in>A. \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" 
+    using \<open>\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)\<close> by auto
+  then obtain a where "a\<in>A \<and> \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" 
+    by force
+  have "\<exists>b. b \<in> C \<and> b \<in> a" 
+    by (meson \<open>C \<subseteq> B \<and> (\<forall>a\<in>A. \<exists>b\<in>C. b \<in> a) \<and> card A = card C\<close> \<open>a \<in> A \<and> (\<nexists>!b. b \<in> C \<and> b \<in> a)\<close>)
+
 
 
 
@@ -1503,6 +1612,91 @@ next
 
     have "\<forall>C \<in> (diff_odd_components E X). \<forall>v\<in>C. 
       \<exists>M. perfect_matching (graph_diff (component_edges E C) {v}) M" sorry
+
+
+    have "\<forall>C \<in> (diff_odd_components E X). finite C"
+      by (meson "1.prems"(2) component_in_E finite_subset)
+    have "\<forall>C \<in> (diff_odd_components E X). C \<noteq> {} " 
+      by (smt (verit, ccfv_threshold) UnE diff_odd_components_def disjoint_insert(2) inf_bot_right mem_Collect_eq odd_card_imp_not_empty odd_components_def singleton_in_diff_def)
+    then have "\<forall>C \<in> (diff_odd_components E X). \<exists>c. c\<in>C" by auto
+
+    then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C" 
+      by (metis Collect_const mem_Collect_eq)
+    then have "\<exists>Z. (\<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C) \<and> (\<forall>z \<in> Z. z \<in> Vs (diff_odd_components E X))" 
+  by (metis vs_member_intro)
+    then obtain Z where "(\<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C) \<and> (\<forall>z \<in> Z. z \<in> Vs (diff_odd_components E X))"     
+      by meson
+    
+    then have "Z \<subseteq> Vs (diff_odd_components E X)" 
+      by fastforce
+    then have "\<forall>z \<in>Z. \<exists>C\<in> (diff_odd_components E X). z \<in> C" 
+      by (meson \<open>(\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C) \<and> (\<forall>z\<in>Z. z \<in> Vs (diff_odd_components E X))\<close> vs_member_elim)
+    have "\<forall>C\<in> (diff_odd_components E X). C \<subseteq> Vs E" 
+      by (simp add: component_in_E)
+    
+    
+    then have "Z \<subseteq> Vs E" 
+      by (meson \<open>\<forall>z\<in>Z. \<exists>C\<in>diff_odd_components E X. z \<in> C\<close> subsetD subsetI)
+    then have "finite Z" 
+      using "1.prems"(2) finite_subset by auto
+
+    have "\<exists>T\<subseteq>Z . \<forall>C\<in>(diff_odd_components E X).
+       \<exists>b\<in>T. b \<in> C \<and> card (diff_odd_components E X) = card T"
+      using yfsdf[of "(diff_odd_components E X)" Z] 
+      by (smt (verit, best) "1.prems"(2) \<open>(\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C) \<and> (\<forall>z\<in>Z. z \<in> Vs (diff_odd_components E X))\<close> \<open>X \<subseteq> Vs E \<and> barrier E X\<close> \<open>finite Z\<close> barrier_def card_eq_0_iff diff_component_disjoint finite_subset)
+    
+
+
+
+    have "(\<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C)" 
+      using \<open>(\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C) \<and> (\<forall>z\<in>Z. z \<in> Vs (diff_odd_components E X))\<close> by blast
+
+    then have "card Z \<ge> card (diff_odd_components E X)"
+      using  inj_cardinality[of "(diff_odd_components E X)" Z]
+      by (metis (no_types, lifting) "1.prems"(2) \<open>X \<subseteq> Vs E \<and> barrier E X\<close> \<open>finite Z\<close> barrier_def card_eq_0_iff diff_component_disjoint finite_subset)
+  
+    then  have "\<exists>T \<subseteq> Z.  card T =  card (diff_odd_components E X)"
+      by (meson obtain_subset_with_card_n)
+    then obtain T where "T \<subseteq> Z \<and>  card T = card (diff_odd_components E X)" 
+
+
+    
+    then have "\<forall>C \<in> (diff_odd_components E X). card (C \<inter> Z) \<ge> 1" 
+      by (metis One_nat_def Suc_leI \<open>\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C\<close> \<open>finite Z\<close> card_gt_0_iff disjoint_iff finite_Int)
+
+
+
+
+    have "\<exists>T \<subseteq> Z. \<forall>C \<in> (diff_odd_components E X). card (C \<inter> T) = 1"
+    proof(rule ccontr)
+      assume "\<not> (\<exists>T\<subseteq>Z. \<forall>C\<in>diff_odd_components E X. card (C \<inter> T) = 1)"
+      then have "\<forall>T\<subseteq>Z. \<exists>C\<in>diff_odd_components E X. card (C \<inter> T) \<noteq> 1"
+        by meson
+      then obtain T1 C1 where "T1 \<subseteq>Z \<and>  C1\<in>diff_odd_components E X \<and> card (C1 \<inter> T1) \<noteq> 1"
+        
+        by (meson Int_lower2)
+      then have "card (C1 \<inter> T1) > 1" sledgehammer
+
+
+
+
+
+
+    then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X). Z \<inter> C \<noteq> {}" 
+      by (meson disjoint_iff)
+
+    let ?Z = {a. a = 
+
+    then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X).\<exists>c. Z \<inter> C = {c}"  
+    obtain Z where "\<forall>C \<in> (diff_odd_components E X).\<exists>c.  Z\<inter>C = {c}" 
+
+
+
+
+
+
+
+
 
 
     then show False sledgehammer
