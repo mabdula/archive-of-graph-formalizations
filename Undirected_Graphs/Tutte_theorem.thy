@@ -962,32 +962,32 @@ proof(induct A arbitrary: B)
 next
   case (insert x F)
   have "\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
-    
+
     by (simp add: insert.prems(2))
-   have "\<exists>b\<in>B. b \<in> x" 
-     by (simp add: insert.prems(3))
-   then obtain b where "b \<in> B \<and> b \<in> x" by auto
-   then have " \<forall>a\<in>F. b \<notin> a" 
-     using UnionI insert.hyps(2) insert.prems(2) by auto
-   then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
-     using insert.prems(3)
-     by (metis insert_iff)
-   then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
-     by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
-   have "finite (B - {b})" 
-     using insert.prems(1) by blast
-   then  have "card F \<le> card (B - {b})" 
+  have "\<exists>b\<in>B. b \<in> x" 
+    by (simp add: insert.prems(3))
+  then obtain b where "b \<in> B \<and> b \<in> x" by auto
+  then have " \<forall>a\<in>F. b \<notin> a" 
+    using UnionI insert.hyps(2) insert.prems(2) by auto
+  then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
+    using insert.prems(3)
+    by (metis insert_iff)
+  then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
+    by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
+  have "finite (B - {b})" 
+    using insert.prems(1) by blast
+  then  have "card F \<le> card (B - {b})" 
     using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - {b}. b1 \<in> a\<close> insert.hyps(3) by presburger 
   then have "card F \<le> card B - 1" 
     by (metis One_nat_def \<open>b \<in> B \<and> b \<in> x\<close> card.empty card.infinite card.insert card_Diff_singleton card_insert_le diff_is_0_eq' emptyE finite.emptyI infinite_remove)
   then have "card F + 1 \<le> card B" using assms
- proof -
-  show ?thesis
-    by (metis (no_types) One_nat_def Suc_leI \<open>b \<in> B \<and> b \<in> x\<close> \<open>card F \<le> card B - 1\<close> add_Suc_right add_leE card_Diff1_less insert.prems(1) nat_arith.rule0 ordered_cancel_comm_monoid_diff_class.le_diff_conv2)
-qed
-    
-    then have "card (insert x F) \<le> card B" 
-      by (simp add: insert.hyps(1) insert.hyps(2))
+  proof -
+    show ?thesis
+      by (metis (no_types) One_nat_def Suc_leI \<open>b \<in> B \<and> b \<in> x\<close> \<open>card F \<le> card B - 1\<close> add_Suc_right add_leE card_Diff1_less insert.prems(1) nat_arith.rule0 ordered_cancel_comm_monoid_diff_class.le_diff_conv2)
+  qed
+
+  then have "card (insert x F) \<le> card B" 
+    by (simp add: insert.hyps(1) insert.hyps(2))
   then show ?case by auto
 qed
 
@@ -999,43 +999,43 @@ lemma yfsdf:
   assumes "\<forall>a\<in>A. \<exists>b\<in>B. b \<in> a"
   shows "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a \<and> card A = card C" using assms(1) assms(2) assms(3) assms(4)
 proof(induct A arbitrary: B)
-case empty
-then show ?case by auto
+  case empty
+  then show ?case by auto
 next
   case (insert x F)
   have "\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
-    
+
     by (simp add: insert.prems(2))
-   have "\<exists>b\<in>B. b \<in> x" 
-     by (simp add: insert.prems(3))
-   then obtain b where "b \<in> B \<and> b \<in> x" by auto
-   then have " \<forall>a\<in>F. b \<notin> a" 
-     using UnionI insert.hyps(2) insert.prems(2) by auto
-   then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
-     using insert.prems(3)
-     by (metis insert_iff)
-   then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
-     by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
-   have "finite (B - {b})" 
-     using insert.prems(1) by blast
-   have "\<exists>C\<subseteq>(B - {b}). \<forall>a\<in>F. \<exists>b\<in>C. b \<in> a  \<and> card F = card C" 
-     using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - {b}. b1 \<in> a\<close> \<open>finite (B - {b})\<close> insert.hyps(3) by presburger
-   then  obtain C where "C\<subseteq>(B - {b}) \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a)  \<and> card F = card C"
-     
-     by (metis card.empty empty_subsetI finite_has_maximal insert.hyps(1))
-   then have "(C \<union> {b}) \<subseteq> B" 
-     using \<open>b \<in> B \<and> b \<in> x\<close> by blast
-   have "\<forall>a\<in>insert x F. \<exists>b\<in> (C \<union> {b}). b \<in> a" 
-     using \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>b \<in> B \<and> b \<in> x\<close> by blast
-   have "card F = card C" 
-     by (simp add: \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close>)
-   
-   have "card (insert x F) = card C + 1" 
-     by (simp add: \<open>card F = card C\<close> insert.hyps(1) insert.hyps(2))
-   
-   then show ?case 
-     by (metis Un_insert_right \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>C \<union> {b} \<subseteq> B\<close> \<open>\<forall>a\<in>insert x F. \<exists>b\<in>C \<union> {b}. b \<in> a\<close> \<open>finite (B - {b})\<close> boolean_algebra_cancel.sup0 card.insert finite_subset insert.hyps(1) insert.hyps(2) subset_Diff_insert)
- qed
+  have "\<exists>b\<in>B. b \<in> x" 
+    by (simp add: insert.prems(3))
+  then obtain b where "b \<in> B \<and> b \<in> x" by auto
+  then have " \<forall>a\<in>F. b \<notin> a" 
+    using UnionI insert.hyps(2) insert.prems(2) by auto
+  then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
+    using insert.prems(3)
+    by (metis insert_iff)
+  then have "\<forall>a\<in>F. \<exists>b1\<in>B-{b}. b1 \<in> a" 
+    by (metis \<open>b \<in> B \<and> b \<in> x\<close> insertE insert_Diff)
+  have "finite (B - {b})" 
+    using insert.prems(1) by blast
+  have "\<exists>C\<subseteq>(B - {b}). \<forall>a\<in>F. \<exists>b\<in>C. b \<in> a  \<and> card F = card C" 
+    using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - {b}. b1 \<in> a\<close> \<open>finite (B - {b})\<close> insert.hyps(3) by presburger
+  then  obtain C where "C\<subseteq>(B - {b}) \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a)  \<and> card F = card C"
+
+    by (metis card.empty empty_subsetI finite_has_maximal insert.hyps(1))
+  then have "(C \<union> {b}) \<subseteq> B" 
+    using \<open>b \<in> B \<and> b \<in> x\<close> by blast
+  have "\<forall>a\<in>insert x F. \<exists>b\<in> (C \<union> {b}). b \<in> a" 
+    using \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>b \<in> B \<and> b \<in> x\<close> by blast
+  have "card F = card C" 
+    by (simp add: \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close>)
+
+  have "card (insert x F) = card C + 1" 
+    by (simp add: \<open>card F = card C\<close> insert.hyps(1) insert.hyps(2))
+
+  then show ?case 
+    by (metis Un_insert_right \<open>C \<subseteq> B - {b} \<and> (\<forall>a\<in>F. \<exists>b\<in>C. b \<in> a) \<and> card F = card C\<close> \<open>C \<union> {b} \<subseteq> B\<close> \<open>\<forall>a\<in>insert x F. \<exists>b\<in>C \<union> {b}. b \<in> a\<close> \<open>finite (B - {b})\<close> boolean_algebra_cancel.sup0 card.insert finite_subset insert.hyps(1) insert.hyps(2) subset_Diff_insert)
+qed
 
 lemma yfsdf1:
   assumes "finite A"
@@ -1043,25 +1043,323 @@ lemma yfsdf1:
   assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
   assumes "\<forall>a\<in>A. \<exists>b\<in>B. b \<in> a"
   shows "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>!b\<in>C. b \<in> a"
-proof(rule ccontr)
-  assume "\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)"
-  then have "\<forall>C\<subseteq>B. \<exists>a\<in>A. \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" by auto
-  have "\<exists>C\<subseteq>B . \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a \<and> card A = card C" using assms yfsdf[of A B]
-    by auto
-  then obtain C where "C\<subseteq>B \<and> ( \<forall>a\<in>A. \<exists>b\<in>C. b \<in> a) \<and> card A = card C" 
-    by (meson \<open>\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)\<close>)
+  using assms(1) assms(2) assms(3) assms(4)
+proof(induct A arbitrary: B)
+  case empty
+  then show ?case by auto
+next
+  case (insert x F)
+  have "\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+
+    by (simp add: insert.prems(2))
+  have "\<exists>b\<in>B. b \<in> x" 
+    by (simp add: insert.prems(3))
+  then obtain b where "b \<in> B \<and> b \<in> x" by auto
+  then have " \<forall>a\<in>F. b \<notin> a" 
+    using UnionI insert.hyps(2) insert.prems(2) by auto
+  then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<noteq> b" 
+    using insert.prems(3)
+    by (metis insert_iff)
+  then have " \<forall>a\<in>F. \<exists>b1\<in>B. b1 \<in> a \<and> b1 \<notin> x" 
+    using insert.hyps(2) insert.prems(2) by fastforce 
 
 
-  then have "\<exists>a\<in>A. \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" 
-    using \<open>\<not> (\<exists>C\<subseteq>B. \<forall>a\<in>A. \<exists>!b. b \<in> C \<and> b \<in> a)\<close> by auto
-  then obtain a where "a\<in>A \<and> \<not> (\<exists>!b. b \<in> C \<and> b \<in> a)" 
+  then have "\<forall>a\<in>F. \<exists>b1\<in>B-x. b1 \<in> a" 
+    by (meson DiffI)
+  have "finite (B - x)" 
+    using insert.prems(1) by blast
+  then have "\<exists>C\<subseteq> (B - x) . \<forall>a\<in>F. \<exists>!b. b \<in> C \<and>  b \<in> a" 
+    using \<open>\<forall>a1\<in>F. \<forall>a2\<in>F. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>\<forall>a\<in>F. \<exists>b1\<in>B - x. b1 \<in> a\<close> insert.hyps(3) by presburger
+  then obtain C where "C\<subseteq> (B - x) \<and> ( \<forall>a\<in>F. \<exists>!b. b \<in> C \<and>  b \<in> a)" by presburger
+  then have "C \<union>{b} \<subseteq> B" 
+    using \<open>b \<in> B \<and> b \<in> x\<close> by blast
+  have "\<forall>a\<in> F. \<exists>!b1. b1 \<in> C\<union>{b} \<and> b1 \<in> a" using `\<forall>a\<in>F. b \<notin> a` 
+    using DiffD2 \<open>C \<subseteq> B - x \<and> (\<forall>a\<in>F. \<exists>!b. b \<in> C \<and> b \<in> a)\<close> by auto
+
+
+  have "\<exists>!b1. b1 \<in> C\<union>{b} \<and> b1 \<in> x" 
+    using \<open>C \<subseteq> B - x \<and> (\<forall>a\<in>F. \<exists>!b. b \<in> C \<and> b \<in> a)\<close> \<open>b \<in> B \<and> b \<in> x\<close> by blast
+  then show ?case using `\<forall>a\<in>F. b \<notin> a` 
+    by (metis \<open>C \<union> {b} \<subseteq> B\<close> \<open>\<forall>a\<in>F. \<exists>!b1. b1 \<in> C \<union> {b} \<and> b1 \<in> a\<close> insert_iff)
+qed
+
+
+lemma yfsdf2:
+  assumes "finite A"
+  assumes "finite (Vs A)"
+  assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}"
+  assumes "\<forall>a\<in>A. \<exists>b\<in> Vs A. b \<in> a"
+  shows "\<exists>C\<subseteq> Vs A. \<forall>a\<in>A. \<exists>!b\<in>C. b \<in> a"
+  by (simp add: assms(1) assms(2) assms(3) assms(4) yfsdf1)
+
+lemma perfect_matching_union:
+  assumes "finite A"
+  assumes "\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}"
+  assumes "\<forall>a \<in> A. \<exists>M. perfect_matching a M"
+  shows "\<exists>M. perfect_matching (\<Union>A) M"
+proof -
+  let ?Ms = "{Ms. \<exists>a \<in> A. Ms = {M. perfect_matching a M}}"
+  have "\<forall>a \<in> A.  graph_invar a"
+    by (meson assms(3) perfect_matching_def)
+  have "\<forall>a \<in> A. finite (Vs a)" 
+    by (simp add: \<open>\<forall>a\<in>A. graph_invar a\<close>)
+  have "graph_invar (\<Union>A)"
+  proof
+    show " \<forall>e\<in>\<Union> A. \<exists>u v. e = {u, v} \<and> u \<noteq> v" 
+      using \<open>\<forall>a\<in>A. graph_invar a\<close> by fastforce
+    show "finite (Vs (\<Union> A))" using `\<forall>a \<in> A. finite (Vs a)` assms(1)  
+      by (metis Vs_def \<open>\<forall>e\<in>\<Union> A. \<exists>u v. e = {u, v} \<and> u \<noteq> v\<close> finite.simps finite_Union finite_UnionD)
+  qed
+
+  have disjoint_edges:"\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}" 
+    by (metis \<open>\<forall>a\<in>A. graph_invar a\<close> assms(2) disjoint_iff_not_equal edges_are_Vs)
+
+
+  let ?f = "(\<lambda>a. {{M. perfect_matching a M}})"
+  have "?Ms = (\<Union>a\<in>A. ?f a)" by blast
+  have "finite (\<Union>a\<in>A. ?f a)" using assms(1) 
+    by blast
+  then have "finite ?Ms" using assms(1)
+    by simp
+  have "\<forall>a \<in> A. {M. perfect_matching a M} \<subseteq> {a1. a1 \<subseteq> a}" 
+    by (simp add: Collect_mono perfect_matching_def)
+
+  then have "\<forall>a \<in> A. finite {M. perfect_matching a M}"
+    by (metis Vs_def \<open>\<forall>a\<in>A. finite (Vs a)\<close> finite_Collect_subsets finite_UnionD finite_subset)
+  then have "finite (Vs ?Ms)"
+    by (smt (verit) Vs_def \<open>finite ?Ms\<close> finite_Union mem_Collect_eq)
+  have "\<forall>a1 \<in> A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} = {{}}"
+  proof
+    fix a1
+    assume "a1 \<in> A"
+    show "\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} = {{}}"
+    proof
+      fix a2
+      assume "a2 \<in> A"
+      show "a1 \<noteq> a2 \<longrightarrow> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} = {{}}"
+      proof
+        assume "a1 \<noteq> a2" 
+        have "a1 \<inter> a2 = {}"
+          using `a1 \<in> A` `a2 \<in> A` `a1 \<noteq> a2` disjoint_edges
+          by auto
+        show "{a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} = {{}}"
+        proof(rule ccontr)
+          assume "{a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} \<noteq> {{}}"
+          have "{} \<in> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2}" 
+            by simp
+          then have "{{}} \<subset>  {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2}"
+
+            by (metis \<open>{a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} \<noteq> {{}}\<close> empty_subsetI insert_subsetI psubsetI)
+          then have "\<exists>a. a \<in> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} \<and> a \<noteq> {}"
+
+            by force
+          then obtain a where "a \<in> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} \<and> a \<noteq> {}" by auto
+          then have "\<exists>x \<in> a. x \<in> a1 \<and> x \<in> a2" 
+            using Int_Collect by blast
+          then show False 
+            using \<open>a1 \<inter> a2 = {}\<close> by blast
+        qed
+      qed
+    qed
+  qed
+  have "\<forall>a1 \<in> A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow>
+     {M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} = {}" 
+  proof 
+    fix a1
+    assume "a1 \<in> A"
+    show "\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow>
+     {M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} = {}"
+    proof
+      fix a2
+      assume "a2 \<in> A"
+      show "a1 \<noteq> a2 \<longrightarrow>
+     {M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} = {}"
+      proof
+        assume "a1 \<noteq> a2" 
+        have "a1 \<inter> a2 = {}"
+          using `a1 \<in> A` `a2 \<in> A` `a1 \<noteq> a2` disjoint_edges
+          by auto
+        have "{M. perfect_matching a1 M} \<subseteq> {a. a \<subseteq> a1}" 
+          by (simp add: Collect_mono perfect_matching_def)
+        have "{M. perfect_matching a2 M} \<subseteq> {a. a \<subseteq> a2}" 
+          by (simp add: Collect_mono perfect_matching_def)
+        then have "{M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M}
+            \<subseteq> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2}" 
+          using \<open>{M. perfect_matching a1 M} \<subseteq> {a. a \<subseteq> a1}\<close> inf_mono by blast
+        then have "{M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} \<subseteq> {{}}"
+
+          by (simp add: \<open>\<forall>a1\<in>A. \<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> {a. a \<subseteq> a1} \<inter> {a. a \<subseteq> a2} = {{}}\<close> \<open>a1 \<in> A\<close> \<open>a1 \<noteq> a2\<close> \<open>a2 \<in> A\<close>)
+        have "a1 \<noteq> {} \<or> a2 \<noteq> {}" 
+          using \<open>a1 \<noteq> a2\<close> by blast
+
+        have "{} \<notin> {M. perfect_matching a1 M} \<or> {} \<notin> {M. perfect_matching a2 M}"
+        proof(rule ccontr)
+          assume " \<not> ({} \<notin> {M. perfect_matching a1 M} \<or> {} \<notin> {M. perfect_matching a2 M})"
+          then have "{} \<in> {M. perfect_matching a1 M} \<and> {} \<in> {M. perfect_matching a2 M}" by auto
+          then have "perfect_matching a1 {}" by auto
+          then have "a1 = {}" unfolding perfect_matching_def 
+            by (metis edges_are_Vs ex_in_conv matching_def2)
+          then have "perfect_matching a2 {}" 
+            using \<open>\<not> ({} \<notin> {M. perfect_matching a1 M} \<or> {} \<notin> {M. perfect_matching a2 M})\<close> by blast
+          then have "a2 = {}" unfolding perfect_matching_def 
+            by (metis edges_are_Vs ex_in_conv matching_def2)
+          then show False 
+            using \<open>a1 = {}\<close> \<open>a1 \<noteq> {} \<or> a2 \<noteq> {}\<close> by auto
+        qed
+        then have "{} \<notin> {M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M}"
+
+          by blast
+        then show "{M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} = {}"
+
+          using \<open>{M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} \<subseteq> {{}}\<close> by auto
+      qed
+    qed
+  qed
+  then have "\<forall>a1 \<in> ?Ms.\<forall>a2\<in>?Ms. a1 \<noteq> a2 \<longrightarrow>
+     a1 \<inter> a2 = {}" 
     by force
-  have "\<exists>b. b \<in> C \<and> b \<in> a" 
-    by (meson \<open>C \<subseteq> B \<and> (\<forall>a\<in>A. \<exists>b\<in>C. b \<in> a) \<and> card A = card C\<close> \<open>a \<in> A \<and> (\<nexists>!b. b \<in> C \<and> b \<in> a)\<close>)
+  have "\<forall>a\<in> ?Ms. \<exists>b\<in> Vs ?Ms. b \<in> a" 
+    by (smt (z3) assms(3) mem_Collect_eq vs_member_intro)
 
 
 
+  then  have "\<exists>C\<subseteq> Vs ?Ms. \<forall>Ms\<in> ?Ms. \<exists>!M\<in>C. M \<in> Ms" using yfsdf2[of ?Ms]
+    using \<open>\<forall>a1\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<forall>a2\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}\<close> \<open>finite (Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}})\<close> \<open>finite {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}\<close> by fastforce
+  then obtain C where "C\<subseteq> Vs ?Ms \<and> (\<forall>Ms\<in> ?Ms. \<exists>!M\<in>C. M \<in> Ms)" by auto
+  have "\<forall>c \<in>C. matching c"
+  proof
+    fix c
+    assume "c \<in>  C"
+    then have "c \<in> Vs ?Ms" 
+      using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> by blast
+    then have "\<exists>a\<in>A. perfect_matching a c" 
+      by (smt (verit, best) mem_Collect_eq vs_member)
+    then show " matching c" unfolding perfect_matching_def by auto
+  qed
 
+  have "matching (\<Union>C)" unfolding matching_def
+  proof
+    fix e1
+    assume "e1 \<in> (\<Union>C)"
+    then have "\<exists>c1\<in>C. e1 \<in> c1" by auto
+    then obtain c1 where "c1\<in>C \<and> e1 \<in> c1" by auto
+    show " \<forall>e2\<in>\<Union> C. e1 \<noteq> e2 \<longrightarrow> e1 \<inter> e2 = {}"
+    proof
+      fix e2
+      assume "e2\<in>\<Union> C"
+      then have "\<exists>c2\<in>C. e2 \<in> c2" by auto
+      then obtain c2 where "c2\<in>C \<and> e2 \<in> c2" by auto
+      show "e1 \<noteq> e2 \<longrightarrow> e1 \<inter> e2 = {}"
+      proof
+        assume "e1 \<noteq> e2"
+        show "e1 \<inter> e2 = {}"
+        proof(cases "c1 = c2")
+          case True
+          have "matching c1" 
+            by (simp add: \<open>\<forall>c\<in>C. matching c\<close> \<open>c1 \<in> C \<and> e1 \<in> c1\<close>)
+          then show ?thesis 
+            by (metis True \<open>c1 \<in> C \<and> e1 \<in> c1\<close> \<open>c2 \<in> C \<and> e2 \<in> c2\<close> \<open>e1 \<noteq> e2\<close> matching_def)
+        next
+          case False
+          have "c1 \<in> Vs ?Ms" using `c1 \<in> C \<and> e1 \<in> c1`
+            using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> by blast
+
+          then have "\<exists>a1\<in>A. perfect_matching a1 c1" 
+            by (smt (verit, best) mem_Collect_eq vs_member)
+          then obtain a1 where "a1\<in>A \<and> perfect_matching a1 c1" by blast
+
+
+          have "c2 \<in> Vs ?Ms" using `c2 \<in> C \<and> e2 \<in> c2`
+            using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> by blast
+
+          then have "\<exists>a2\<in>A. perfect_matching a2 c2" 
+            by (smt (verit, best) mem_Collect_eq vs_member)
+          then obtain a2 where "a2\<in>A \<and> perfect_matching a2 c2" by blast
+          have "a1 \<noteq> a2"
+          proof(rule ccontr)
+            assume "\<not> a1 \<noteq> a2"
+            then have "a1 = a2" by auto
+            have "(\<exists>!M\<in>C. M \<in> {M. perfect_matching a1 M})" 
+              using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> \<open>\<not> a1 \<noteq> a2\<close> \<open>a2 \<in> A \<and> perfect_matching a2 c2\<close> \<open>c2 \<in> C \<and> e2 \<in> c2\<close> by auto
+            then have "c1 = c2" 
+              using \<open>a1 = a2\<close> \<open>a1 \<in> A \<and> perfect_matching a1 c1\<close> \<open>a2 \<in> A \<and> perfect_matching a2 c2\<close> \<open>c1 \<in> C \<and> e1 \<in> c1\<close> \<open>c2 \<in> C \<and> e2 \<in> c2\<close> by blast
+            then show False 
+              using False by auto
+          qed
+          have "a1 \<inter> a2 = {}" 
+            by (simp add: \<open>a1 \<in> A \<and> perfect_matching a1 c1\<close> \<open>a1 \<noteq> a2\<close> \<open>a2 \<in> A \<and> perfect_matching a2 c2\<close> disjoint_edges)
+          have "c1 \<subseteq> a1 \<and> c2 \<subseteq> a2" 
+            using \<open>a1 \<in> A \<and> perfect_matching a1 c1\<close> \<open>a2 \<in> A \<and> perfect_matching a2 c2\<close> perfect_matching_def by blast
+          have "c1 \<inter> c2 = {}" 
+            using \<open>a1 \<inter> a2 = {}\<close> \<open>c1 \<subseteq> a1 \<and> c2 \<subseteq> a2\<close> by blast
+          then show ?thesis 
+            by (metis \<open>a1 \<in> A \<and> perfect_matching a1 c1\<close> \<open>a1 \<noteq> a2\<close> \<open>a2 \<in> A \<and> perfect_matching a2 c2\<close> \<open>c1 \<in> C \<and> e1 \<in> c1\<close> \<open>c2 \<in> C \<and> e2 \<in> c2\<close> assms(2) disjoint_iff_not_equal perfect_matching_def vs_member_intro)
+        qed
+      qed
+    qed
+  qed
+  have "\<Union>C \<subseteq> \<Union>A"
+  proof
+    fix x
+    assume "x \<in> \<Union>C"
+    then have "\<exists>c\<in>C. x \<in> c" by auto
+    then obtain c where "c\<in>C \<and> x \<in> c" by auto
+    then have "c \<in> Vs ?Ms" 
+      using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> by blast
+
+    then have "\<exists>a1\<in>A. perfect_matching a1 c" 
+      by (smt (verit, best) mem_Collect_eq vs_member)
+    then obtain a where "a\<in>A \<and> perfect_matching a c" by blast
+    then have "c \<subseteq> a" unfolding perfect_matching_def by auto
+    then have "x \<in> a" 
+      using \<open>c \<in> C \<and> x \<in> c\<close> by blast
+    then show "x \<in> \<Union>A" 
+      using \<open>a \<in> A \<and> perfect_matching a c\<close> by blast
+  qed
+  have "Vs (\<Union>C) = Vs (\<Union>A)"
+  proof(safe)
+    {
+      fix x
+      assume " x \<in> Vs (\<Union> C)"
+      then have "\<exists>e \<in> (\<Union> C). x \<in> e" 
+        by (meson vs_member_elim)
+      then obtain e where "e \<in> (\<Union> C) \<and> x \<in> e" by auto
+      then have "\<exists>c\<in>C. e \<in> c" by auto
+      then obtain c where "c\<in>C \<and> e \<in> c" by auto
+      then have "c \<in> Vs ?Ms" 
+        using \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> by blast
+
+      then have "\<exists>a1\<in>A. perfect_matching a1 c" 
+        by (smt (verit, best) mem_Collect_eq vs_member)
+      then obtain a where "a\<in>A \<and> perfect_matching a c" by blast
+      then have "c \<subseteq> a" unfolding perfect_matching_def by auto
+      then have "e \<in> a" 
+        using \<open>c \<in> C \<and> e \<in> c\<close> by blast
+      then have "e \<in> \<Union>A"  using \<open>a \<in> A \<and> perfect_matching a c\<close> by blast
+      then show "x \<in> Vs (\<Union> A)" 
+        by (meson \<open>e \<in> \<Union> C \<and> x \<in> e\<close> vs_member_intro)
+    }
+    fix x 
+    assume "x \<in> Vs (\<Union> A)"
+    then have "\<exists>e \<in> (\<Union> A). x \<in> e" 
+      by (meson vs_member_elim)
+    then obtain e where "e \<in> (\<Union> A) \<and> x \<in> e" by auto
+    then have "\<exists>a \<in>A. e \<in> a" 
+      by blast
+    then obtain a where "a \<in>A \<and> e \<in> a" by auto
+    then have "\<exists>c \<in> C. perfect_matching a c" 
+      by (metis (mono_tags, lifting) \<open>C \<subseteq> Vs {Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}} \<and> (\<forall>Ms\<in>{Ms. \<exists>a\<in>A. Ms = {M. perfect_matching a M}}. \<exists>!M. M \<in> C \<and> M \<in> Ms)\<close> mem_Collect_eq)
+    then obtain c where "c \<in> C \<and> perfect_matching a c" by auto
+    then have "Vs a =  Vs c" unfolding perfect_matching_def by auto
+    then have "x \<in> Vs c" 
+      using \<open>a \<in> A \<and> e \<in> a\<close> \<open>e \<in> \<Union> A \<and> x \<in> e\<close> by blast 
+    then show "x \<in> Vs (\<Union> C)" 
+      by (metis Vs_def \<open>c \<in> C \<and> perfect_matching a c\<close> vs_member)
+  qed
+  then have "perfect_matching (\<Union> A) (\<Union> C)" unfolding perfect_matching_def
+    using \<open>\<Union> C \<subseteq> \<Union> A\<close> \<open>graph_invar (\<Union> A)\<close> \<open>matching (\<Union> C)\<close> by blast
+  then show ?thesis by auto
+qed
 
 lemma tutte2:
   assumes "graph_invar E"
@@ -1610,8 +1908,72 @@ next
       qed
     qed
 
-    have "\<forall>C \<in> (diff_odd_components E X). \<forall>v\<in>C. 
-      \<exists>M. perfect_matching (graph_diff (component_edges E C) {v}) M" sorry
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    have "(diff_odd_components E X) = {C. \<exists>x \<in> Vs E - X. C = connected_component (graph_diff E X) x}" sorry
+
+
+    let ?G' = "{e'. \<exists>x y. {x, y} \<in> E \<and> y \<in> X \<and> e' = {connected_component (graph_diff E X) x,{y}}}"
+    have "\<exists>M. perfect_matching ?G' M" sorry
+    then obtain M' where "perfect_matching ?G' M'" by auto
+    let ?M' = "{e. \<exists> x y. e = {x, y} \<and> e \<in> E \<and> {connected_component (graph_diff E X) x, {y}} \<in> M'}"
+    let ?Z2 = "{C. \<exists> x y. C = {c . \<exists> e. e \<in> E \<and> e = {c, y} \<and> c \<notin> X}
+             \<and> x \<in> C \<and> {connected_component (graph_diff E X) x, {y}} \<in> M'}"
+    have "\<exists>Z' \<subseteq> Vs ?Z2. \<forall>C \<in> ?Z2. \<exists>!z \<in> Z'. z \<in> C" sorry
+    then obtain Z' where "Z' \<subseteq> Vs ?Z2 \<and> ( \<forall>C \<in> ?Z2. \<exists>!z \<in> Z'. z \<in> C)" by auto
+   
+    
+    have "\<forall>C \<in> (diff_odd_components E X). 
+      \<exists>M. perfect_matching (graph_diff (component_edges E C) Z') M"
+    proof
+      fix C
+      assume "C \<in> (diff_odd_components E X)"
+   
+      then have "\<exists> x. C = connected_component (graph_diff E X) x" 
+        using \<open>diff_odd_components E X = {C. \<exists>x\<in>Vs E - X. C = connected_component (graph_diff E X) x}\<close> by auto
+      then obtain x where "C = connected_component (graph_diff E X) x" by auto
+      have "C \<in> Vs ?G'" sledgehammer
+      then have "\<exists>y. {C, {y}} \<in> M'" 
+
+
+   show "\<exists>M. perfect_matching (graph_diff (component_edges E C) Z') M"
+
+    
+    let ?M2 = "{e. \<exists> x y. e = {x, y} \<and> x \<in> Z' \<and> {connected_component (graph_diff E X) x, {y}} \<in> M'}"
+    have "Vs ?M2 = Z' \<union> X"
+      sorry
+    have "?M2 \<subseteq> E" sorry
+    have "perfect_matching ?M2 ?M2" sorry
+
+    let ?E' = "{e. e \<inter> Vs ?M2 = {} \<and> e \<in> E}"
+    let ?E'_comp = "{E'. \<exists> C \<in> (diff_odd_components E X). E' = {e. e \<subseteq> C \<and> e \<inter> Vs ?M2 = {} \<and> e \<in> E}}"
+    have "\<forall>E' \<in> ?E'_comp. \<exists>M. perfect_matching E' M" sorry
+
+
+
+
+
+
+
+
+
+
+
 
 
     have "\<forall>C \<in> (diff_odd_components E X). finite C"
@@ -1622,19 +1984,20 @@ next
 
     then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C" 
       by (metis Collect_const mem_Collect_eq)
-    then have "\<exists>Z. (\<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C) \<and> (\<forall>z \<in> Z. z \<in> Vs (diff_odd_components E X))" 
-  by (metis vs_member_intro)
+    then have "\<exists>Z. (\<forall>C \<in> (diff_odd_components E X). \<exists>c \<in> Z. c\<in>C) \<and>
+                   (\<forall>z \<in> Z. z \<in> Vs (diff_odd_components E X))" 
+      by (metis vs_member_intro)
     then obtain Z where "(\<forall>C \<in> (diff_odd_components E X).\<exists>c \<in> Z. c\<in>C) \<and> (\<forall>z \<in> Z. z \<in> Vs (diff_odd_components E X))"     
       by meson
-    
+
     then have "Z \<subseteq> Vs (diff_odd_components E X)" 
       by fastforce
     then have "\<forall>z \<in>Z. \<exists>C\<in> (diff_odd_components E X). z \<in> C" 
       by (meson \<open>(\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C) \<and> (\<forall>z\<in>Z. z \<in> Vs (diff_odd_components E X))\<close> vs_member_elim)
     have "\<forall>C\<in> (diff_odd_components E X). C \<subseteq> Vs E" 
       by (simp add: component_in_E)
-    
-    
+
+
     then have "Z \<subseteq> Vs E" 
       by (meson \<open>\<forall>z\<in>Z. \<exists>C\<in>diff_odd_components E X. z \<in> C\<close> subsetD subsetI)
     then have "finite Z" 
@@ -1644,7 +2007,7 @@ next
        \<exists>b\<in>T. b \<in> C \<and> card (diff_odd_components E X) = card T"
       using yfsdf[of "(diff_odd_components E X)" Z] 
       by (smt (verit, best) "1.prems"(2) \<open>(\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C) \<and> (\<forall>z\<in>Z. z \<in> Vs (diff_odd_components E X))\<close> \<open>X \<subseteq> Vs E \<and> barrier E X\<close> \<open>finite Z\<close> barrier_def card_eq_0_iff diff_component_disjoint finite_subset)
-    
+
 
 
 
@@ -1654,52 +2017,52 @@ next
     then have "card Z \<ge> card (diff_odd_components E X)"
       using  inj_cardinality[of "(diff_odd_components E X)" Z]
       by (metis (no_types, lifting) "1.prems"(2) \<open>X \<subseteq> Vs E \<and> barrier E X\<close> \<open>finite Z\<close> barrier_def card_eq_0_iff diff_component_disjoint finite_subset)
-  
+
     then  have "\<exists>T \<subseteq> Z.  card T =  card (diff_odd_components E X)"
       by (meson obtain_subset_with_card_n)
     then obtain T where "T \<subseteq> Z \<and>  card T = card (diff_odd_components E X)" 
 
 
-    
-    then have "\<forall>C \<in> (diff_odd_components E X). card (C \<inter> Z) \<ge> 1" 
-      by (metis One_nat_def Suc_leI \<open>\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C\<close> \<open>finite Z\<close> card_gt_0_iff disjoint_iff finite_Int)
+
+      then have "\<forall>C \<in> (diff_odd_components E X). card (C \<inter> Z) \<ge> 1" 
+        by (metis One_nat_def Suc_leI \<open>\<forall>C\<in>diff_odd_components E X. \<exists>c\<in>Z. c \<in> C\<close> \<open>finite Z\<close> card_gt_0_iff disjoint_iff finite_Int)
 
 
 
 
-    have "\<exists>T \<subseteq> Z. \<forall>C \<in> (diff_odd_components E X). card (C \<inter> T) = 1"
-    proof(rule ccontr)
-      assume "\<not> (\<exists>T\<subseteq>Z. \<forall>C\<in>diff_odd_components E X. card (C \<inter> T) = 1)"
-      then have "\<forall>T\<subseteq>Z. \<exists>C\<in>diff_odd_components E X. card (C \<inter> T) \<noteq> 1"
-        by meson
-      then obtain T1 C1 where "T1 \<subseteq>Z \<and>  C1\<in>diff_odd_components E X \<and> card (C1 \<inter> T1) \<noteq> 1"
-        
-        by (meson Int_lower2)
-      then have "card (C1 \<inter> T1) > 1" sledgehammer
+      have "\<exists>T \<subseteq> Z. \<forall>C \<in> (diff_odd_components E X). card (C \<inter> T) = 1"
+      proof(rule ccontr)
+        assume "\<not> (\<exists>T\<subseteq>Z. \<forall>C\<in>diff_odd_components E X. card (C \<inter> T) = 1)"
+        then have "\<forall>T\<subseteq>Z. \<exists>C\<in>diff_odd_components E X. card (C \<inter> T) \<noteq> 1"
+          by meson
+        then obtain T1 C1 where "T1 \<subseteq>Z \<and>  C1\<in>diff_odd_components E X \<and> card (C1 \<inter> T1) \<noteq> 1"
 
-
-
-
-
-
-    then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X). Z \<inter> C \<noteq> {}" 
-      by (meson disjoint_iff)
-
-    let ?Z = {a. a = 
-
-    then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X).\<exists>c. Z \<inter> C = {c}"  
-    obtain Z where "\<forall>C \<in> (diff_odd_components E X).\<exists>c.  Z\<inter>C = {c}" 
+          by (meson Int_lower2)
+        then have "card (C1 \<inter> T1) > 1" sledgehammer
 
 
 
 
 
 
+          then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X). Z \<inter> C \<noteq> {}" 
+            by (meson disjoint_iff)
+
+          let ?Z = {a. a = 
+
+          then have "\<exists>Z. \<forall>C \<in> (diff_odd_components E X).\<exists>c. Z \<inter> C = {c}"  
+            obtain Z where "\<forall>C \<in> (diff_odd_components E X).\<exists>c.  Z\<inter>C = {c}" 
 
 
 
 
-    then show False sledgehammer
+
+
+
+
+
+
+              then show False sledgehammer
 
 
 
