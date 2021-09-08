@@ -57,6 +57,16 @@ lemma reachable_other_vertex:
   using reach_singleton reachable_is_union 
   by (smt (verit, best) Collect_cong)
 
+
+lemma reachable_subset:
+  assumes "A \<subseteq> X"
+  shows "reachable E A \<subseteq> reachable E X"
+  unfolding reachable_def 
+  by (smt (verit, best) Collect_mono assms subset_eq)
+
+
+
+
 lemma reachble_bipartite:
   assumes "partitioned_bipartite E A"
   shows "reachable E A =  Vs E - A" 
