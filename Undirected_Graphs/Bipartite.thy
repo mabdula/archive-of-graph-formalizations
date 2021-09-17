@@ -37,6 +37,26 @@ definition reachable where
 definition other_vertex where
   "other_vertex M x \<equiv> { v . (\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)}"
 
+
+lemma perfect_matching_member[iff?]: "perfect_matching E M \<longleftrightarrow>
+  graph_invar E \<and> matching M \<and> M \<subseteq> E \<and> Vs M = Vs E"
+  unfolding perfect_matching_def by simp
+
+
+lemma perfect_matching_elim[elim]:
+  assumes "perfect_matching E M"
+  shows "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
+  using assms 
+    by(auto simp: perfect_matching_member)
+
+
+lemma perfect_matching_intro[intro]:
+  assumes "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
+  shows "perfect_matching E M" 
+  using assms
+  by (simp add: perfect_matching_member)
+
+
 lemma card_edge:
   assumes "graph_invar E"
   shows "\<forall> e\<in> E. card e = 2" 
@@ -1201,5 +1221,40 @@ proof
       by (smt (verit) \<open>cover_matching E M A\<close> cover_matching_def perfect_matching_def)
   qed
 qed
+
+
+lemma edge_in_component_edges:
+ assumes "graph_invar E"
+  assumes "e \<in> E"
+  assumes "e \<subseteq> C" 
+  shows "e \<in> component_edges E C"
+  using assms component_edges_def by fastforce 
+
+lemma graph_component_edges_partition:
+  assumes "graph_invar E"
+  shows "\<Union> (components_edges E) = E"
+  unfolding components_edges_def
+proof(safe)
+  fix e
+  assume "e \<in> E" 
+  then obtain C where "e \<subseteq> C" "C \<in> connected_components E" 
+    by (metis assms edge_in_component)
+  moreover then have "e \<in> component_edges E C" 
+    by (simp add: \<open>e \<in> E\<close> assms edge_in_component_edges)
+  ultimately show "e \<in> \<Union>{component_edges E C |C.  C \<in> connected_components E}" 
+    by blast 
+qed (auto simp add: component_edges_def)
+
+lemma graph_component_partition:
+  assumes "graph_invar E"
+  shows "\<Union> (connected_components E) = Vs E" 
+  unfolding connected_components_def
+proof(safe)
+  fix y
+  assume "y \<in> Vs E"
+  then show "y \<in> \<Union> {connected_component E v |v. v \<in> Vs E}" 
+    using  in_own_connected_component by fastforce
+qed (metis in_connected_component_in_edges)
+
 
 end
