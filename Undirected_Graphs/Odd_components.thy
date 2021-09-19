@@ -1699,4 +1699,20 @@ next
     qed
   qed
 qed
+
+lemma diff_odd_components_same_inter_vertices:
+  assumes "graph_invar E"
+  shows "diff_odd_components E (Y \<inter> Vs E) = diff_odd_components E Y"
+proof -
+  have "graph_diff E (Y \<inter> Vs E) = graph_diff E Y" unfolding graph_diff_def by blast
+
+  then have "singleton_in_diff E (Y \<inter> Vs E) = singleton_in_diff E Y" unfolding singleton_in_diff_def
+    apply safe 
+     apply (simp)
+     by force
+
+   then show ?thesis 
+     by (simp add: \<open>graph_diff E (Y \<inter> Vs E) = graph_diff E Y\<close> diff_odd_components_def)
+ qed
+
 end
