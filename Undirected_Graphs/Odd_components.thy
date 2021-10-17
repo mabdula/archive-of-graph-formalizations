@@ -295,6 +295,7 @@ proof(safe)
         diff_odd_components_intro2 odd_components_intro singleton_in_diff_intro)
 qed
 
+
 lemma diff_odd_components_are_components_elim[elim]:
   assumes "C \<in> diff_odd_components E X"
   

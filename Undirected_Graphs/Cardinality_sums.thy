@@ -122,6 +122,11 @@ next
     by (simp add: \<open>(\<Sum>C\<in>F. card (f C)) = card (\<Union> (f ` F))\<close> insert.hyps(1) insert.hyps(2))
 qed  
 
+lemma union_card_is_at_least_sum:
+  assumes "finite A"
+  shows "sum (\<lambda> C. card (f C)) A \<ge> card (\<Union>C\<in>A. (f C))" using assms
+  using Groups_Big.card_UN_le 
+  by blast
 
 lemma sum_card_connected_components:
   assumes "graph_invar E"

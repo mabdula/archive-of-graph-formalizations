@@ -65,6 +65,8 @@ inductive path where
   path2: "{v,v'} \<in> X \<Longrightarrow> path (v'#vs) \<Longrightarrow> path (v#v'#vs)"
 end
 
+value[nbe] "path {{1::nat, 2}, {2, 3}, {3, 4}} [1, 4, 3] = True"
+
 declare path0[simp]
 
 inductive_simps path_1[simp]: "path X [v]"

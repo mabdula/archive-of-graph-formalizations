@@ -339,18 +339,16 @@ qed
 
 lemma new_components_subset_of_old_one:
   assumes "graph_invar E"
-  assumes "tutte_condition E"
   assumes "X \<subseteq> Vs E"
   assumes "C \<in> (diff_odd_components E X)"
   assumes "Y \<subseteq> C"
   assumes "C' \<in>  diff_odd_components (component_edges (graph_diff E X) C) Y"
   shows " C' \<subseteq> Vs  (component_edges (graph_diff E X) C)"
   using component_in_E[of C' "(component_edges (graph_diff E X) C)" "Y"]   
-  using assms(6) by blast
+  using assms(5) by blast
 
 lemma new_components_in_old_one:
   assumes "graph_invar E"
-  assumes "tutte_condition E"
   assumes "X \<subseteq> Vs E"
   assumes "C \<in> (diff_odd_components E X)"
   shows " Vs  (component_edges (graph_diff E X) C) \<subseteq> C" 
@@ -369,7 +367,6 @@ qed
 
 lemma new_components_intersection_old_is_empty:
   assumes "graph_invar E"
-  assumes "tutte_condition E"
   assumes "X \<subseteq> Vs E"
   assumes "C \<in> (diff_odd_components E X)"
   assumes "Y \<subseteq> C"
@@ -385,9 +382,9 @@ proof(rule ccontr)
     by (meson ex_in_conv)
   then have "C' \<subseteq> C" using new_components_in_old_one[of E X C]
       new_components_subset_of_old_one[of E X C Y C'] 
-    using assms(1) assms(2) assms(3) assms(5) assms(4) by auto
+    by (metis IntD2 assms(1) assms(2) assms(3) dual_order.trans odd_components_subset_vertices)
   have "\<forall>C'\<in>diff_odd_components E X - {C}. C' \<inter> C = {}" 
-    by (metis DiffD2 assms(1) assms(4) diff_component_disjoint insert_Diff insert_iff)
+    by (metis DiffD2  assms(3) diff_component_disjoint insert_Diff insert_iff)
   have "C' \<inter> C = {}" 
     by (meson IntD1 \<open>C' \<in> (diff_odd_components E X - {C}) \<inter> diff_odd_components (component_edges (graph_diff E X) C) Y\<close> \<open>\<forall>C'\<in>diff_odd_components E X - {C}. C' \<inter> C = {}\<close>)
   then have "C' = {}" 

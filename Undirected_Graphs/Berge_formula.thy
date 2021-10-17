@@ -865,8 +865,16 @@ then have "e \<in> ?H"
 qed
 qed
 
+
+locale add_vertices =
+  fixes E :: "'a set set"
+  fixes f :: "'a  \<Rightarrow> 'a " 
+  assumes graph: "graph_invar E"
+  assumes inj: "inj_on f (Vs E)" 
+  assumes "\<forall>x \<in> Vs E. f x \<notin> Vs E"
+begin
+
 lemma  berge_formula2':
-  assumes "graph_invar E"
   assumes "graph_matching E M"
   assumes "X \<subseteq> Vs E"
  assumes "\<forall>Y \<subseteq> Vs E. int (card (diff_odd_components E X)) - int (card X) \<ge> 
@@ -874,36 +882,58 @@ lemma  berge_formula2':
  assumes "\<forall>M'. graph_matching E M' \<longrightarrow> card M \<ge> card M'" 
   shows " 2 * (card M) + card (diff_odd_components E X) - card X \<ge> card (Vs E)"
 proof -
-  let ?E' = "{{{x}, {y}}| x y. {x, y} \<in> E}"
-  let ?M' = "{{{x}, {y}}| x y. {x, y} \<in> M}"
-  let ?X' = "{{x}| x. x \<in> X}"
-  have "?M' \<subseteq> ?E'" 
-    using assms(2) by blast
-  have "matching ?M'" unfolding matching_def 
-    apply safe 
-           apply (metis assms(2) doubleton_eq_iff insertCI matching_unique_match)
-      apply (smt (verit, ccfv_SIG) Diff_insert_absorb assms(2) insertCI insert_commute insert_subsetI matching_unique_match singleton_insert_inj_eq')
-         apply (metis assms(2) doubleton_eq_iff insertCI matching_unique_match)
-        apply (metis assms(2) doubleton_eq_iff insertCI matching_unique_match)
-   apply (smt (z3) Diff_insert_absorb assms(2) insertCI insert_absorb insert_commute matching_unique_match singleton_insert_inj_eq)
-  apply (smt (verit) Diff_insert_absorb assms(2) insertCI insert_commute insert_subsetI matching_unique_match singleton_insert_inj_eq')
-  apply (smt (z3) assms(2) insertCI insert_absorb insert_ident matching_unique_match singleton_insert_inj_eq')
-  by (smt (verit) Diff_insert_absorb assms(2) insertCI insert_absorb insert_commute matching_unique_match singleton_insert_inj_eq)
+  obtain A' where "A' = (\<Union>x\<in>Vs E. {(f x)})" 
+    by simp
+  let ?f' = "(\<lambda> x. {f x})"
+  have "\<forall>x1 \<in> Vs E. \<forall>x2 \<in> Vs E. x1 \<noteq> x2 \<longrightarrow> f x1 \<noteq> f x2" using inj    
+    by (meson inj_on_def)
+  then have "\<forall>x1 \<in> Vs E. \<forall>x2 \<in> Vs E. x1 \<noteq> x2 \<longrightarrow> ?f' x1 \<inter> ?f' x2 = {}" by blast
+  have "finite (Vs E)" using graph  by auto
+  have "\<forall>x \<in> Vs E. finite (?f' x)" by auto
+  have "sum (\<lambda> x. card (?f' x)) (Vs E) = card (\<Union>x\<in>(Vs E). (?f' x))" 
+    using union_card_is_sum[of "Vs E" ?f']
+    using \<open>\<forall>x1\<in>Vs E. \<forall>x2\<in>Vs E. x1 \<noteq> x2 \<longrightarrow> {f x1} \<inter> {f x2} = {}\<close> \<open>finite (Vs E)\<close> by blast 
+  have "sum (\<lambda> x. card (?f' x)) (Vs E) = sum (\<lambda> x. 1) (Vs E)"
+    by (meson is_singleton_altdef is_singleton_def)
+  then have "sum (\<lambda> x. card (?f' x)) (Vs E) = card (Vs E)" by auto
+  then have "card A' = card (Vs E)" 
+    using \<open>(\<Sum>x\<in>Vs E. card {f x}) = card (\<Union>x\<in>Vs E. {f x})\<close> \<open>A' = (\<Union>x\<in>Vs E. {f x})\<close> by presburger
+  have "A' \<inter> (Vs E) = {}"
+  proof(rule ccontr)
+    assume " A' \<inter> Vs E \<noteq> {}"
+    then obtain a where "a \<in>  A' \<inter> Vs E" by auto
+    have "a \<in> (\<Union>x\<in>Vs E. {(f x)})"  using \<open>A' = (\<Union>x\<in>Vs E. {f x})\<close> \<open>a \<in> A' \<inter> Vs E\<close> by fastforce
 
-
-  then  have "graph_matching ?E' ?M'" 
-    using \<open>{{{x}, {y}} |x y. {x, y} \<in> M} \<subseteq> {{{x}, {y}} |x y. {x, y} \<in> E}\<close> by fastforce
-
-
-
-
-
-
-  obtain A where "finite A \<and> card A = card (diff_odd_components E X) - card X \<and> A \<inter> Vs E = {}" 
-    sorry
+    then obtain x where  "x \<in> Vs E \<and> f x = a" 
+      by blast
+    then show False 
+      by (metis IntD2 \<open>a \<in> A' \<inter> Vs E\<close> add_vertices_axioms add_vertices_def)
+  qed
+  have " card (diff_odd_components E X)  \<le> card (Vs E)" 
+    by (metis (no_types, lifting) assms(2) card_Diff_subset diff_le_self diff_odd_comps_card finite_subset graph order_trans)
+  then have " card (diff_odd_components E X) - card X  \<le> card (Vs E)" 
+    by (meson diff_le_self dual_order.trans)
+  then have "card (diff_odd_components E X) - card X  \<le> card A'" 
+    using \<open>card A' = card (Vs E)\<close> by presburger
+  have "finite A'" 
+    using \<open>A' = (\<Union>x\<in>Vs E. {f x})\<close> graph by blast
+  then obtain A where "A \<subseteq> A' \<and> (card (diff_odd_components E X) - card X = card A)" 
+    by (metis \<open>card (diff_odd_components E X) - card X \<le> card A'\<close> obtain_subset_with_card_n)
+ 
   then show " 2 * (card M) + card (diff_odd_components E X) - card X \<ge> card (Vs E)"
     using berge_formula2[of E M X A] assms 
-    by blast
+    by (smt (z3) \<open>A' \<inter> Vs E = {}\<close> \<open>finite A'\<close> disjoint_iff_not_equal finite_subset graph subsetD)
 qed
 
+lemma  berge_formula:
+  assumes "graph_matching E M"
+  assumes "X \<subseteq> Vs E"
+ assumes "\<forall>Y \<subseteq> Vs E. int (card (diff_odd_components E X)) - int (card X) \<ge> 
+          int (card (diff_odd_components E Y)) - int (card Y)" 
+ assumes "\<forall>M'. graph_matching E M' \<longrightarrow> card M \<ge> card M'" 
+  shows " 2 * (card M) + card (diff_odd_components E X) - card X = card (Vs E)"
+  using berge_formula2'[of M X] 
+  by (simp add: assms(1) assms(2) assms(3) assms(4) graph le_antisym left_uncoverred_matching)
+
+end
 end
