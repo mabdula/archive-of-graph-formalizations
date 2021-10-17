@@ -1,5 +1,5 @@
 theory Tutte_matrix
-  imports "HOL-Library.Permutations" "HOL-Analysis.Determinants" Tutte_theorem3
+  imports "HOL-Algebra.Cycles" "HOL-Analysis.Determinants" Tutte_theorem3
 begin
 
 
@@ -242,7 +242,17 @@ definition tutte_matrix:: " ('a set => 'b ) \<Rightarrow> 'b::comm_ring_1^'n^'n"
                                 (if (f j, f i) \<in> oriented_edges then (- x {f i, f j}) 
                                  else 0 ))"
 
-                        
+lemma edge_not_in_E_zero_elem:
+  assumes "{f i, f j} \<notin> E"
+  shows "tutte_matrix X$i$j = 0"
+proof -
+  have "(f i, f j) \<notin> oriented_edges" using assms 
+    by (meson oriented_edges)
+  have "(f j, f i) \<notin> oriented_edges" using assms 
+    by (metis insert_commute oriented_edges)
+  then show ?thesis 
+    by (simp add: \<open>(f i, f j) \<notin> oriented_edges\<close> local.tutte_matrix_def)
+qed
 
 lemma tutte_matrix_det:
 "det (tutte_matrix x) =  sum (\<lambda>p. of_int (sign p) *
@@ -477,6 +487,168 @@ lemma u_edges_is_graph:
   shows "graph_invar (u_edges p)" 
   by (metis assms graph graph_invar_subset tutte_matrix.wqewqe1 tutte_matrix_axioms)
 
+definition prev where
+"prev p x = (inv p) x" 
+
+definition nxt where
+"nxt p x = p x"
+
+
+lemma p_is_permutation:
+  assumes "p permutes (UNIV :: 'n set)"
+  shows "permutation p" 
+  using assms finite_class.finite_UNIV permutation_permutes by blast
+
+lemma even_circuits_connected_component:
+  shows "(f ((p^^j) i), f ((p^^(j+1)) i)) \<in>  (p_edges p)" 
+  using p_edges_def by auto
+
+lemma nonzero_perms_not_id:
+assumes "p \<in> nonzero_perms X"
+shows "p i \<noteq> i" 
+proof(rule ccontr)
+  assume "\<not> (p i \<noteq> i)"
+  then have "p i = i" by auto
+  have "{f i, f i} \<notin> E" 
+    using graph by fastforce
+  then have "tutte_matrix X $ i $ p i = 0" using edge_not_in_E_zero_elem 
+    by (metis \<open>\<not> p i \<noteq> i\<close>)
+ then have "prod (\<lambda>i. (tutte_matrix X)$i$p i) (UNIV :: 'n set) = 0"
+   using Groups_Big.comm_semiring_1_class.prod_zero 
+   finite_class.finite_UNIV by fast  
+      then show False using assms(1) nonzero_perms_def
+        by blast   
+    qed
+
+lemma oriented_edges_correspond_to_undirected:
+  assumes "p \<in> nonzero_perms X"
+  assumes "(x, y) \<in> (p_edges p)"
+  shows "{x, y} \<in> u_edges p" 
+proof -
+  obtain i where "(f i, f (p i)) = (x, y)" 
+    using assms(2) p_edges_def by auto
+  then have "{f i, f (p i)} \<in> u_edges p" 
+    using u_edges_def by auto
+  then show ?thesis 
+    using \<open>(f i, f (p i)) = (x, y)\<close> by blast
+qed
+
+lemma end_of_circuit_edge:
+ assumes "p \<in> nonzero_perms X"
+ assumes "i \<in> (UNIV :: 'n set)"
+ shows "(f ((p^^((least_power p i)-1)) i), f i) \<in>  (p_edges p)" 
+proof -
+  have  "(f ((p^^((least_power p i)-1)) i), f ((p^^(((least_power p i)-1)+1)) i)) \<in>  (p_edges p)"
+    using even_circuits_connected_component by blast
+  have "p i \<noteq> i" using nonzero_perms_not_id assms(1) by auto
+  have "permutation p" using assms(1) unfolding nonzero_perms_def 
+    using p_is_permutation 
+    by blast
+  then obtain n where "(p ^^ n) = id" and "n > 0" using permutation_is_nilpotent
+    by blast
+  then have "least_power p i > 0" using least_powerI 
+    by (simp add: \<open>permutation p\<close> least_power_of_permutation(2))
+  then have "(f ((p^^((least_power p i)-1)) i), f ((p^^((least_power p i))) i)) \<in>  (p_edges p)"
+    using \<open>(f ((p ^^ (least_power p i - 1)) i), f ((p ^^ (least_power p i - 1 + 1)) i)) \<in> p_edges p\<close> by force
+  then show ?thesis 
+    by (simp add: \<open>permutation p\<close> least_power_of_permutation(1))
+qed
+
+lemma fewfw:
+  assumes "\<forall>i < size xs-1. (xs!i, xs!(i+1)) \<in> A"
+  assumes "size xs \<ge> 2" 
+  shows "dpath A xs" using assms
+proof(induct xs)
+  case Nil
+  then show ?case 
+    by auto
+next
+  case (Cons a xs)
+  have "length (a#xs) - 1 = length xs" 
+    by simp
+  have "\<forall>i<length xs-1. (xs ! i, xs ! (i + 1)) \<in> A" 
+    using Cons.prems 
+    using less_diff_conv by auto
+ 
+  have " ((a # xs) ! 0, (a # xs) ! (0 + 1)) \<in> A" 
+    using Cons.prems 
+    by (metis One_nat_def Suc_pred \<open>length (a # xs) - 1 = length xs\<close> diff_Suc_1 diff_is_0_eq' length_greater_0_conv list.simps(3) list.size(3) nat_1_add_1 plus_1_eq_Suc)
+  then have "(a, xs!0) \<in> A" 
+    by simp
+  show ?case
+  proof(cases "xs = []")
+    case True
+    have "a \<in> verts A" unfolding verts_def using `(a, xs!0) \<in> A` 
+      
+      by force
+    have "dpath A [a]" 
+      by (simp add: \<open>a \<in> verts A\<close>)
+    then show ?thesis 
+      by (simp add: True)
+  next
+    case False
+
+
+  have "xs \<noteq> []" 
+    by (simp add: False)
+  show ?thesis
+  proof(cases "size xs = 1")
+    case True
+
+    have "xs!0 \<in> verts A" unfolding verts_def using `(a, xs!0) \<in> A` 
+      by force
+    have "xs = [xs!0]" 
+      by (metis One_nat_def Suc_length_conv True length_0_conv nth_Cons_0)
+    have "dpath A [a, xs!0]" 
+      by (simp add: \<open>(a, xs ! 0) \<in> A\<close> \<open>xs ! 0 \<in> verts A\<close>)
+    then show ?thesis 
+      using \<open>xs = [xs ! 0]\<close> by auto
+  next
+    case False
+ have " dpath A xs" 
+    using Cons.hyps \<open>\<forall>i<length xs-1. (xs ! i, xs ! (i + 1)) \<in> A\<close> 
+    by (metis False Suc_leI \<open>xs \<noteq> []\<close> length_greater_0_conv less_one nat_neq_iff one_add_one plus_1_eq_Suc)
+ 
+  have "xs = hd xs # tl xs" 
+    by (simp add: \<open>xs \<noteq> []\<close>)
+  then have "(a, hd xs) \<in> A" 
+    by (metis \<open>(a, xs ! 0) \<in> A\<close> nth_Cons_0)
+  
+  then show ?thesis 
+    by (metis \<open>dpath A xs\<close> \<open>xs = hd xs # tl xs\<close> dpath_2) 
+qed
+qed
+qed
+
+lemma circuit_is_dpath:
+  assumes "p \<in> nonzero_perms X"
+  shows "dpath (p_edges p) (map f (support p i))"
+proof -
+  let ?xs = "(map f (support p i))"
+  have "\<forall>j <size ?xs. ?xs!j = f ((p^^j) i)" 
+    by simp
+  have "\<forall>i < size ?xs-1. (?xs!i, ?xs!(i+1)) \<in> (p_edges p)"
+    using even_circuits_connected_component 
+    by auto
+ have "p i \<noteq> i" using nonzero_perms_not_id assms(1) by auto
+  have "permutation p" using assms(1) unfolding nonzero_perms_def 
+    using p_is_permutation 
+    by blast
+
+  have "(least_power p i) > 1" 
+    by (simp add: \<open>p i \<noteq> i\<close> \<open>permutation p\<close> least_power_gt_one)
+  then have "size (support p i) \<ge> 2" 
+    by simp 
+  then have "size  (map f (support p i)) \<ge> 2" 
+    by simp
+  then show "dpath (p_edges p) (map f (support p i))"
+    using
+
+fewfw 
+    using \<open>\<forall>ia<length (map f (support p i)) - 1. (map f (support p i) ! ia, map f (support p i) ! (ia + 1)) \<in> p_edges p\<close> by blast
+qed
+
+
 lemma even_circuits_has_perfect_matching:
   assumes "p \<in> nonzero_perms X"
   assumes "\<forall>C \<in> connected_components (u_edges p). even (card C) "
@@ -494,65 +666,7 @@ proof
       by (simp add: \<open>C \<in> connected_components (u_edges p)\<close> connected_component_subs_Vs)
     show "\<exists> M'. perfect_matching (component_edges (u_edges p) C) M'"
     proof
-      let ?C = "(component_edges (u_edges p) C)"
-      have "Vs ?C = C"
-      proof(safe)
-        {
-          fix x 
-          assume "x \<in> Vs ?C"
-          then obtain x' y' where "{x', y'} \<in> ?C \<and> x \<in> {x', y'}" 
-  by (smt (verit) Berge.component_edges_subset assms(1) graph subsetD tutte_matrix.wqewqe1 tutte_matrix_axioms vs_member_elim)
 
-  then have "{x', y'} \<subseteq> C \<and> {x', y'} \<in> (u_edges p)" unfolding component_edges_def
-    
-    by force
-          show "x \<in> C" 
-            using \<open>{x', y'} \<in> component_edges (u_edges p) C \<and> x \<in> {x', y'}\<close> \<open>{x', y'} \<subseteq> C \<and> {x', y'} \<in> u_edges p\<close> by blast
-        }
-
-        fix x
-        assume "x \<in> C"
-        then obtain y where " {x, y} \<in> (u_edges p)" 
-          by (smt (verit, ccfv_SIG) \<open>C \<subseteq> Vs (u_edges p)\<close> assms(1) insert_commute insert_iff singletonD subsetD tutte_matrix.u_edges_is_graph tutte_matrix_axioms vs_member_elim)
-
-        then have "C = connected_component  (u_edges p) x" 
-          by (simp add: \<open>C \<in> connected_components (u_edges p)\<close> \<open>x \<in> C\<close> connected_components_closed')
-        then have "y \<in> C" 
-          by (smt (verit, ccfv_threshold) \<open>{x, y} \<in> u_edges p\<close> connected_comp_has_vert connected_components_closed edge_in_component insertCI subsetD)
-        then have "{x, y} \<subseteq> C" 
-          by (simp add: \<open>x \<in> C\<close>)
-        show "x \<in> Vs ?C" 
-          by (smt (verit, del_insts) \<open>{x, y} \<in> u_edges p\<close> \<open>{x, y} \<subseteq> C\<close> assms(1) edge_in_component_edges insertCI tutte_matrix.u_edges_is_graph tutte_matrix_axioms vs_member)
-      qed
-
-        
-      have "\<forall> X \<subseteq> C. card (diff_odd_components ?C X) \<le> card X"
-      proof(rule)+
-        fix X
-        assume "X \<subseteq> C"
-        have "finite X" 
-          by (meson \<open>C \<subseteq> Vs (u_edges p)\<close> \<open>X \<subseteq> C\<close> assms(1) finite_subset u_edges_is_graph)
-        show "card (diff_odd_components ?C X) \<le> card X" using `finite X`
-        proof(induct X)
-          case empty
-          
-          have "(diff_odd_components ?C {}) =
-  {C'. \<exists> v\<in>Vs ?C-{}. connected_component (graph_diff ?C {}) v = C' \<and> odd (card C')}" by blast
-          have "graph_diff ?C {} = ?C" 
-            using graph_diff_empty by blast
-          have " {C'. \<exists> v\<in>Vs ?C-{}. connected_component (graph_diff ?C {}) v = C' \<and> odd (card C')} =
-           {C'. \<exists> v\<in>C. connected_component ?C v = C' \<and> odd (card C')}" 
-    using \<open>Vs (component_edges (u_edges p) C) = C\<close> \<open>graph_diff (component_edges (u_edges p) C) {} = component_edges (u_edges p) C\<close> by force
-  have "connected_components ?C = {C}" sorry
-
-
-  then show ?case 
-    by (smt (verit, best) Collect_empty_eq \<open>C \<in> connected_components (u_edges p)\<close> \<open>diff_odd_components (component_edges (u_edges p) C) {} = {C'. \<exists>v\<in>Vs (component_edges (u_edges p) C) - {}. connected_component (graph_diff (component_edges (u_edges p) C) {}) v = C' \<and> odd (card C')}\<close> \<open>{C'. \<exists>v\<in>Vs (component_edges (u_edges p) C) - {}. connected_component (graph_diff (component_edges (u_edges p) C) {}) v = C' \<and> odd (card C')} = {C'. \<exists>v\<in>C. connected_component (component_edges (u_edges p) C) v = C' \<and> odd (card C')}\<close> assms(2) card.empty card_mono connected_components_closed' finite.emptyI singletonI subset_iff)
-
-next
-case (insert x F)
-then show ?case sorry
-qed
 
 end
 
