@@ -700,6 +700,103 @@ proof -
   then show ?thesis by auto
 qed
 
+lemma vs_connected_component:
+  assumes "graph_invar A"
+  assumes "C \<in> connected_components A"
+  shows "Vs (component_edges A C) = C"
+proof(safe)
+  {
+    fix x
+    assume "x \<in> Vs (component_edges A C)"
+    then obtain e where "x \<in> e \<and> e \<in> (component_edges A C)" 
+      by (meson vs_member_elim)
+    then have "e \<subseteq> C" 
+      by (smt (verit, best) component_edges_def mem_Collect_eq)
+    then show "x \<in> C"
+      by (meson \<open>x \<in> e \<and> e \<in> component_edges A C\<close> subsetD)
+    }
+    fix x
+    assume "x \<in> C"
+    then have "x \<in> Vs A" 
+      by (meson assms connected_comp_verts_in_verts)
+    then obtain e where "x \<in> e \<and> e \<in> A" 
+      by (meson vs_member_elim)
+    then obtain y where "e = {x, y}" 
+      using assms(1) by fastforce
+    then have "y \<in> C" 
+      by (smt (verit) \<open>x \<in> C\<close> \<open>x \<in> Vs A\<close> \<open>x \<in> e \<and> e \<in> A\<close> assms edge_in_component insertCI own_connected_component_unique subset_iff)
+    then have "e \<subseteq> C" 
+      by (simp add: \<open>e = {x, y}\<close> \<open>x \<in> C\<close>)
+    then have "e \<in> (component_edges A C)" 
+      by (simp add: \<open>x \<in> e \<and> e \<in> A\<close> assms(1) edge_in_component_edges)
+    then show "x \<in> Vs (component_edges A C)" 
+      using \<open>x \<in> e \<and> e \<in> A\<close> by blast
+  qed
+
+lemma components_edges_all:
+  assumes "graph_invar A"
+  shows "A = \<Union> (components_edges A)"
+proof(safe)
+  {
+    fix e
+    assume "e \<in> A"
+    obtain C where "C \<in> connected_components A \<and> e \<subseteq> C"
+      using edge_in_component 
+      by (metis \<open>e \<in> A\<close> assms)
+    then have "e \<in> component_edges A C" unfolding component_edges_def 
+      using \<open>e \<in> A\<close> assms by fastforce
+    then show "e \<in> \<Union> (components_edges A)" 
+      by (simp add: \<open>e \<in> A\<close> assms graph_component_edges_partition)
+  }
+ 
+  fix e C'
+  assume "C' \<in> (components_edges A)" "e \<in> C'"
+  then show "e \<in> A"  
+    using  assms graph_component_edges_partition by fastforce
+qed
+
+
+lemma perfect_matching_union_components:
+  assumes "graph_invar A"
+  assumes "\<forall>a \<in> connected_components A. \<exists>M. perfect_matching (component_edges A a) M"
+  shows "\<exists>M. perfect_matching A M"
+proof -
+  have "finite (components_edges A)" 
+    by (metis Vs_def assms(1) finite_UnionD graph_component_edges_partition)
+  let ?E = "(components_edges A)" 
+  have "\<forall>a \<in> ?E. \<exists>M. perfect_matching a M" using assms(2) unfolding components_edges_def
+    by blast
+  have " \<forall>a1\<in>?E. \<forall>a2\<in>?E. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}"
+  proof
+    fix a1
+    assume "a1 \<in> ?E"
+    then obtain C1 where "C1 \<in> connected_components A \<and> a1 = component_edges A C1"
+      by (smt (verit) components_edges_def mem_Collect_eq)
+    then have "Vs a1 = C1" 
+      by (simp add: assms(1) vs_connected_component)
+    show "\<forall>a2\<in>?E. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}" 
+    proof
+      fix a2
+       assume "a2 \<in> ?E"
+    then obtain C2 where "C2 \<in> connected_components A \<and> a2 = component_edges A C2"
+      by (smt (verit) components_edges_def mem_Collect_eq)
+    then have "Vs a2 = C2" 
+      by (simp add: assms(1) vs_connected_component)
+    have "C1 \<noteq> C2 \<longrightarrow> C1 \<inter> C2 = {}" 
+      by (meson \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> connected_components_disj)
+
+   then show "a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}" 
+     using \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> \<open>Vs a1 = C1\<close> \<open>Vs a2 = C2\<close> 
+     
+     by force
+  qed
+qed
+  have "A = \<Union>?E" using assms(1) components_edges_all by blast  
+  then show "\<exists>M. perfect_matching A M" using perfect_matching_union[of ?E] 
+    using `finite ?E` ` \<forall>a1\<in>?E. \<forall>a2\<in>?E. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}` 
+   `\<forall>a \<in> ?E. \<exists>M. perfect_matching a M` by auto
+qed
+
 lemma odd_components_subset_vertices:
   assumes "C \<in> (diff_odd_components E X)"
   shows "C \<subseteq> Vs E"
