@@ -2338,19 +2338,395 @@ proof -
     using \<open>p permutes UNIV\<close> rev_p_permutes by force
 qed
 
+lemma inv_least_power_same:
+  assumes "p permutes (UNIV:: 'n set)"
+  shows "least_power p i = least_power (inv p) i" 
+proof -
+  let ?l = "least_power p i" 
+  let ?inv_l = "least_power (inv p) i"
+  have "(p^^?l) i = i" 
+    by (simp add: assms least_power_of_permutation(1) p_is_permutation)
+  have "((inv p)^^(?inv_l)) i = i" 
+    by (simp add: assms least_power_of_permutation(1) p_is_permutation permutation_inverse)
+  then have "i = (p^^?inv_l) i" 
+    by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+
+  show ?thesis
+  proof(rule ccontr)
+    assume "?l \<noteq> ?inv_l"
+    then have "?l < ?inv_l" 
+      by (metis \<open>i = (p ^^ least_power (inv p) i) i\<close> assms le_eq_less_or_eq least_power_le least_power_of_permutation(2) p_is_permutation permutation_inverse)
+
+    then show False 
+      by (metis \<open>(p ^^ least_power p i) i = i\<close> assms bij_fn bij_inv_eq_iff inv_fn leD least_power_le least_power_of_permutation(2) p_is_permutation permutes_imp_bij)
+  qed
+qed
+
+
+
+
+lemma el_in_own_support:
+assumes "p permutes (UNIV :: 'n set)"
+  shows "i \<in> set (support p i)" 
+proof -
+  have "(p^^0) i = i" by simp
+  then have "support p i!0 = i" 
+    by (simp add: assms least_power_of_permutation(2) p_is_permutation)
+  then show ?thesis 
+    by (metis assms least_power_of_permutation(2) length_map length_upt nth_mem p_is_permutation zero_less_diff)
+qed
+
+lemma inv_support_same:
+  assumes "p permutes (UNIV:: 'n set)"
+  shows "set (support p i) = set (support (inv p) i)" 
+proof(safe)
+  have "i \<in> set (support (inv p) i)" 
+    using el_in_own_support assms 
+    by (metis  permutes_inv)
+  { 
+    fix x
+    assume "x \<in> set (support p i)"
+    then obtain j where "x = (p^^j) i \<and> j < least_power p i" 
+      by fastforce
+    then have "((inv p)^^j) x= i" 
+      by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+    then show "x \<in>  set (support (inv p) i)" 
+      by (smt (verit, ccfv_SIG) assms el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation permutes_inv)
+  }
+  fix x
+  assume "x \<in>  set (support (inv p) i)"
+   then obtain j where "x = ((inv p)^^j) i \<and> j < least_power (inv p) i" 
+      by fastforce
+    then have "(p^^j) x= i" 
+      by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+  then show "x \<in>  set (support p i)" 
+      by (smt (verit, ccfv_SIG) assms el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation permutes_inv)
+  qed
+
+lemma pow_id:
+  assumes "p a = a" 
+  shows "(p^^n) a = a"
+  apply (induct n; simp)
+  by (simp add: assms)
+
+lemma pow_rev_p_is_inv:
+  assumes "p permutes (UNIV:: 'n set)"
+  assumes "a \<in> (set (support p ((inv f) (least_odd p))))" 
+  shows "((inv p)^^n) a = ((rev_p p)^^n) a"
+proof (induct n)
+  case 0
+  then show ?case 
+    by simp
+next
+  case (Suc n)
+  let ?A = "(set (support p ((inv f) (least_odd p))))"
+  have " (set (support p ((inv f) (least_odd p)))) =  (set (support (inv p) ((inv f) (least_odd p))))"
+    using assms(1) inv_support_same by blast
+  then have " (inv p) a \<in> (set (support (inv p) ((inv f) (least_odd p))))" 
+  proof -
+    have "\<forall>n. p (inv p n) = n"
+      by (meson assms(1) permutes_inverses(1))
+    then show ?thesis
+      by (metis (no_types) \<open>set (support p (inv f (least_odd p))) = set (support (inv p) (inv f (least_odd p)))\<close> assms(1) assms(2) comp_apply not_on_odd_def p_is_composition permutes_inverses(2))
+  qed
+  then have "((inv p ^^ n) a) \<in> (set (support (inv p) ((inv f) (least_odd p))))"
+    by (metis \<open>set (support p (inv f (least_odd p))) = set (support (inv p) (inv f (least_odd p)))\<close> assms(1) assms(2) elemnets_in_support_expo p_is_permutation permutation_inverse)
+  then have "((inv p ^^ n) a) \<in> (set (support p ((inv f) (least_odd p))))"
+    using \<open>set (support p (inv f (least_odd p))) = set (support (inv p) (inv f (least_odd p)))\<close> by blast
+
+  then have "(rev_p p) ((inv p ^^ n) a) = (inv p) ((inv p ^^ n) a)"  
+    using rev_p_def by presburger
+
+  then show "(inv p ^^ Suc n) a = (rev_p p ^^ Suc n) a" 
+    by (simp add: Suc.hyps)
+qed
+
+lemma pow_rev_p_is_same:
+  assumes "p permutes (UNIV:: 'n set)"
+  assumes "a \<notin> (set (support p ((inv f) (least_odd p))))" 
+  shows "(p^^n) a = ((rev_p p)^^n) a"
+proof (induct n)
+  case 0
+  then show ?case 
+    by simp
+next
+  case (Suc n)
+ let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  have "(p^^n) a \<notin>  (set (support p ((inv f) (least_odd p))))" 
+    by (smt (verit, best) assms(1) assms(2) elemnets_in_support_expo' map_eq_conv p_is_permutation)
+  then have "(rev_p p) ((p ^^ n) a) = p ((p ^^ n) a)" 
+    using assms(1) p_rev_p_same' by presburger
+
+  then show "(p ^^ Suc n) a = (rev_p p ^^ Suc n) a" 
+    by (simp add: Suc.hyps)
+qed
+
+  
+
+lemma rev_p_support_same:
+  assumes "p permutes (UNIV:: 'n set)"
+  shows "set (support p i) = set (support (rev_p p) i)" 
+proof(safe)
+ let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  have "i \<in> set (support (rev_p p) i)" 
+    using el_in_own_support assms 
+    using rev_p_permutes by presburger
+
+  have "i \<in> set (support p  i)" 
+ using el_in_own_support assms 
+    using rev_p_permutes by presburger
+  
+  have "permutation ((rev_p p))" 
+    by (simp add: assms p_is_permutation rev_p_permutes) 
+  have "permutation p" 
+    by (simp add: assms p_is_permutation)
+  { 
+    fix x
+    assume "x \<in> set (support p i)"
+    then obtain j where "x = (p^^j) i \<and> j < least_power p i" 
+      by fastforce
+    then have "((inv p)^^j) x= i" 
+      by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+    have "(least_power p i)-j > 0" 
+      by (simp add: \<open>x = (p ^^ j) i \<and> j < least_power p i\<close>)
+    have "(p^^(least_power p i)) x = (p^^((least_power p i) + j)) i" 
+      
+      by (simp add: \<open>x = (p ^^ j) i \<and> j < least_power p i\<close> funpow_add)
+    then have "(p^^(((least_power p i)-j)+j)) x = (p^^((least_power p i)+j)) i"
+      using `(least_power p i)-j > 0`  
+      by simp
+    then have "(p^^(((least_power p i)-j))) x = (p^^((least_power p i))) i"
+      
+      by (metis (no_types, lifting) Nat.add_diff_assoc2 \<open>x = (p ^^ j) i \<and> j < least_power p i\<close> add_diff_cancel_right' funpow_add less_imp_le o_apply)
+    then have "(p^^((least_power p i)-j)) x = i" 
+      by (simp add: assms least_power_of_permutation(1) p_is_permutation)
+
+    show "x \<in>  set (support (rev_p p) i)" 
+    proof(cases "x \<in> ?A")
+      case True
+      then have "((inv p)^^j) x = ((rev_p p)^^j) x" 
+        using assms pow_rev_p_is_inv by presburger
+      then have "((rev_p p)^^j) x = i" 
+        using \<open>(inv p ^^ j) x = i\<close> by presburger
+      then show ?thesis using 
+          `i \<in> set (support (rev_p p) i)` 
+          elemnets_in_support_expo'[of "(rev_p p)" i i j x] 
+        using \<open>permutation (rev_p p)\<close> by fastforce
+ 
+    next
+      case False
+      have "(p^^((least_power p i)-j)) x = ((rev_p p)^^((least_power p i)-j)) x" 
+        using pow_rev_p_is_same[of p x "(least_power p i)-j"]
+        using False assms by blast
+      then have "((rev_p p)^^((least_power p i)-j)) x = i" 
+        using \<open>(p ^^ (least_power p i - j)) x = i\<close> by presburger
+      then show ?thesis using
+          `i \<in> set (support (rev_p p) i)` 
+          elemnets_in_support_expo'[of "(rev_p p)" i i "(least_power p i - j)" x] 
+        using \<open>permutation (rev_p p)\<close> by fastforce
+    qed
+  }
+  let ?lp = "least_power (rev_p p) i" 
+  fix x
+  assume "x \<in>  set (support (rev_p p) i)"
+   then obtain j where j_sup:"x = ((rev_p p)^^j) i \<and> j < least_power (rev_p p) i" 
+     
+     by fastforce
+ 
+    have "?lp-j > 0" 
+      by (simp add: j_sup)
+    have "((rev_p p)^^?lp) x = ((rev_p p)^^(?lp + j)) i" 
+      
+      by (simp add:j_sup funpow_add)
+    then have "((rev_p p)^^((?lp-j)+j)) x = ((rev_p p)^^(?lp+j)) i"
+      using `?lp-j > 0`  
+      by simp
+    then have "((rev_p p)^^((?lp-j))) x = ((rev_p p)^^(?lp)) i"
+      
+      by (metis (no_types, lifting) Nat.add_diff_assoc2 j_sup add_diff_cancel_right' funpow_add less_imp_le o_apply)
+    then have "((rev_p p)^^(?lp-j)) x = i" 
+      by (simp add: \<open>permutation (rev_p p)\<close> least_power_of_permutation(1))
+    show "x \<in>  set (support p i)" 
+    proof(cases "i \<in> ?A")
+      case True
+      then have "((inv p)^^j) i = ((rev_p p)^^j) i" 
+        using assms pow_rev_p_is_inv by presburger
+      then have "((inv p)^^j) i = x" 
+        using j_sup by presburger
+      then have "i = (p^^j) x" 
+        by (metis (no_types, lifting) assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+      then show ?thesis using 
+          `i \<in> set (support p  i)` 
+          elemnets_in_support_expo'[of p i i j x] assms 
+        using p_is_permutation by blast 
+    next
+      case False
+      have "(p^^((least_power p i)-j)) i = ((rev_p p)^^((least_power p i)-j)) i" 
+        using pow_rev_p_is_same[of p i "(least_power p i)-j"]
+        using False assms by blast
+      then have "((rev_p p)^^(?lp-j)) x = i" 
+        using \<open>(rev_p p ^^ (least_power (rev_p p) i - j)) x = i\<close> by blast 
+      then show ?thesis using
+          `i \<in> set (support p i)` 
+          elemnets_in_support_expo' `permutation p` 
+        by (metis False assms j_sup pow_rev_p_is_same)
+    qed
+  qed
+
+lemma rev_u_edges_same:
+ assumes "p permutes (UNIV:: 'n set)"
+ assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
+shows "(u_edges p) = (u_edges (rev_p p))" 
+proof(safe)
+let ?A = "(set (support p ((inv f) (least_odd p))))"
+  {
+    fix e
+    assume "e \<in> (u_edges p)"
+    then obtain i where "e = {f i, f (p i)}" 
+      using u_edges_def by fastforce
+
+    show "e \<in> (u_edges (rev_p p))" 
+    proof(cases "i \<in> ?A")
+      case True
+      then have "p i \<in> ?A" 
+        by (smt (verit, best) assms(1) comp_apply map_eq_conv not_on_odd_def on_odd_p_permutes p_is_composition permutes_in_image)
+
+      then have "(rev_p p) (p i) = (inv p) (p i)" 
+        using rev_p_def by presburger
+      then have "(rev_p p) (p i) = i " 
+        by (metis assms(1) permutes_inverses(2))
+      have "{f (p i), f ((rev_p p) (p i))} \<in> (u_edges (rev_p p))"  
+        using tutte_matrix.u_edges_def tutte_matrix_axioms by fastforce
+      then show ?thesis 
+        by (simp add: \<open>e = {f i, f (p i)}\<close> \<open>rev_p p (p i) = i\<close> insert_commute)
+    next
+      case False
+       then have "(rev_p p) i = p i" 
+         using assms(1) p_rev_p_same' by presburger
+        have "{f i, f ((rev_p p) i)} \<in> (u_edges (rev_p p))"  
+        using tutte_matrix.u_edges_def tutte_matrix_axioms by fastforce
+      then show ?thesis 
+        by (simp add: \<open>e = {f i, f (p i)}\<close> \<open>rev_p p i = p i\<close>)
+    qed
+  }
+  fix e
+  assume "e \<in>  u_edges (rev_p p)"
+ then obtain i where "e = {f i, f ((rev_p p) i)}" 
+      using u_edges_def by fastforce
+  show "e \<in> (u_edges p)" 
+    proof(cases "i \<in> ?A")
+      case True
+      have "(rev_p p) i = (inv p) i"   using True rev_p_def by presburger
+      have "{f ((inv p) i), f (p ((inv p) i))} \<in>  u_edges p" 
+        using u_edges_def by auto
+      then show ?thesis 
+        by (metis \<open>e = {f i, f (rev_p p i)}\<close> \<open>rev_p p i = inv p i\<close> assms(1) doubleton_eq_iff permutes_inv_eq)
+
+    next
+      case False
+      have "(rev_p p) i = p i" using False 
+        using assms(1) p_rev_p_same' by presburger
+      then show ?thesis 
+        using \<open>e = {f i, f (rev_p p i)}\<close> u_edges_def by auto
+    qed
+  qed
+
+lemma least_odd_least:
+  assumes "p permutes (UNIV:: 'n set)"
+  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
+  assumes "odd (least_power p a)"
+  shows "(least_odd p) \<le> f a" 
+  unfolding least_odd_def
+  by (metis Least_le UNIV_I assms(3) bij bij_betw_inv_into_left)
+
+
 lemma rev_least_odd_same:
  assumes "p permutes (UNIV:: 'n set)"
  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
  shows "least_odd p = least_odd (rev_p p)" 
 proof -
-  let ?A = "(set (support p ((inv f) (least_odd p))))" 
+
+  have "(rev_p p) permutes  (UNIV:: 'n set)" 
+    by (simp add: assms(1) rev_p_permutes)
+  have "\<exists>C \<in> connected_components (u_edges (rev_p p)). odd (card C)"
+    
+    using assms(1) assms(2) rev_u_edges_same by presburger
+  let ?sup = "(\<lambda> p i. (set (support p i)))" 
+  let ?A_rev = "(set (support (rev_p p) ((inv f) (least_odd (rev_p p)))))"
   let ?i = "(inv f) (least_odd p)"
+  let ?i_rev = "(inv f) (least_odd (rev_p p))"
   have "odd (least_power p ?i)"  
     using assms(1) assms(2) least_odd_is_odd by presburger
-  have "(p^^0) ?i = ?i" sledgehammer
-  have "?i \<in> ?A" 
+ 
+  have "odd (least_power (rev_p p) ?i_rev)"
+  using assms(1) assms(2) least_odd_is_odd 
+  by (simp add: \<open>\<exists>C\<in>connected_components (u_edges (rev_p p)). odd (card C)\<close> \<open>rev_p p permutes UNIV\<close>)
+
+  have "?sup p ?i = ?sup (rev_p p) ?i" 
+    using assms(1) rev_p_support_same by presburger
+  then have "odd (least_power (rev_p p) ?i)" 
+    by (smt (verit, best) \<open>odd (least_power p (inv f (least_odd p)))\<close> \<open>rev_p p permutes UNIV\<close> assms(1) diff_zero distinct_card length_map length_upt map_eq_conv perm_support_distinct)
 
 
+
+  have  "?sup p ?i_rev = ?sup (rev_p p) ?i_rev" 
+    using assms(1) rev_p_support_same by presburger
+  then  have "odd (least_power p ?i_rev)"  
+  proof -
+    have f1: "\<forall>n. cycle (support p n)"
+      using assms(1) perm_support_distinct by blast
+    have "card (set (support p (inv f (least_odd (rev_p p))))) = least_power (rev_p p) (inv f (least_odd (rev_p p)))"
+      using \<open>rev_p p permutes UNIV\<close> \<open>set (support p (inv f (least_odd (rev_p p)))) = set (support (rev_p p) (inv f (least_odd (rev_p p))))\<close> distinct_card perm_support_distinct by force
+then show ?thesis
+  using f1 by (metis (no_types) \<open>odd (least_power (rev_p p) (inv f (least_odd (rev_p p))))\<close> diff_zero distinct_card length_map length_upt)
+qed
+
+  have "least_odd p \<le> least_odd (rev_p p)" 
+    by (metis \<open>odd (least_power p (inv f (least_odd (rev_p p))))\<close> least_odd_def wellorder_Least_lemma(2))
+  have "least_odd p \<ge> least_odd (rev_p p)"  
+    using \<open>odd (least_power (rev_p p) (inv f (least_odd p)))\<close> least_odd_def wellorder_Least_lemma(2) by fastforce
+  then show ?thesis 
+    using \<open>least_odd p \<le> least_odd (rev_p p)\<close> by auto
+qed
+  
+
+lemma p_also_not_in_support:
+  assumes "p permutes (UNIV:: 'n set)"
+  assumes "x \<notin> set (support p i)"
+  shows "(p x) \<notin> set (support p i)" 
+proof(rule ccontr)
+ have "i \<in> set (support p i)" 
+    using assms(1) el_in_own_support by blast 
+  assume "\<not> p x \<notin> set (support p i)" 
+  then have "p x \<in> set (support p i)" by auto
+  then obtain j where "p x = (p^^j) i \<and> j < least_power p i" 
+    by auto
+  show False
+  proof(cases "j = 0")
+    case True
+    have "p x = i" 
+      by (simp add: True \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close>)
+    then have "(p^^1) x = i" 
+      by simp
+    then have "x \<in> set (support p i)" 
+      by (smt (verit, ccfv_SIG) assms(1) el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation)
+
+then show ?thesis 
+  using assms(2) by blast
+next
+  case False
+  have "p x = ((p^^((j-1)+1)) i)" 
+    using False \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> by auto 
+  then have "p x = p ((p^^((j-1))) i)" 
+    by simp
+  then have "x = (p^^((j-1))) i" 
+    by (metis assms(1) bij_imp_bij_inv bij_is_surj permutes_imp_bij surj_f_inv_f)
+  then have "support p i!(j-1) = x"
+    by (simp add: \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> less_imp_diff_less)
+  then show ?thesis 
+    using \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> assms(2) by force
+qed
+qed
 
 lemma rev_rev_same:
   assumes "p permutes (UNIV:: 'n set)"
@@ -2358,7 +2734,10 @@ lemma rev_rev_same:
   shows "rev_p (rev_p p) = p" 
 proof 
   fix x
-let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  let ?A' = "(set (support (rev_p p) ((inv f) (least_odd (rev_p p)))))" 
+  have "?A = ?A'" 
+    using assms(1) assms(2) rev_least_odd_same rev_p_support_same by presburger
   have "rev_p p = ((inv (on_odd  p)) \<circ>  not_on_odd p)"
   
   using assms(1) rev_is_composition by auto
@@ -2368,15 +2747,44 @@ let ?A = "(set (support p ((inv f) (least_odd p))))"
           not_on_odd ((inv (on_odd  p)) \<circ>  not_on_odd p))" 
     by (simp add: \<open>rev_p p = inv (on_odd p) \<circ> not_on_odd p\<close>)
  
-  show "rev_p (rev_p p) x = p x"
+  show "(rev_p (rev_p p)) x = p x" 
   proof(cases "x \<in> ?A")
     case True
-    
-    then show ?thesis sorry
+    then have "not_on_odd (rev_p p) x = x" 
+      using \<open>set (support p (inv f (least_odd p))) = set (support (rev_p p) (inv f (least_odd (rev_p p))))\<close> not_on_odd_out by force
+    have "p x \<in> ?A" 
+      by (smt (z3) True assms(1) bij_imp_bij_inv bij_is_surj map_eq_conv on_odd_def on_odd_p_permutes_UNIV permutes_imp_bij permutes_inv_inv surj_f_inv_f)
+
+    then have "(on_odd  (rev_p p)) (p x) = (inv p) (p x)"   
+      unfolding  on_odd_def
+      using \<open>set (support p (inv f (least_odd p))) = set (support (rev_p p) (inv f (least_odd (rev_p p))))\<close> rev_p_def by fastforce
+
+    then have "(on_odd  (rev_p p)) (p x) = x" 
+      by (metis assms(1) permutes_inv_eq) 
+    then have "inv ((on_odd  (rev_p p))) x = p x" 
+      by (metis assms(1) on_odd_p_permutes_UNIV permutes_inv_eq rev_p_permutes)
+    then show "(rev_p (rev_p p)) x = p x" 
+      by (simp add: \<open>not_on_odd (rev_p p) x = x\<close> \<open>rev_p (rev_p p) = inv (on_odd (rev_p p)) \<circ> not_on_odd (rev_p p)\<close>)
   next
     case False
-    then show ?thesis sorry
-  qed
+ then have "not_on_odd (rev_p p) x = (rev_p p) x" using not_on_odd_in[of x "(rev_p p)"]  
+   using \<open>set (support p (inv f (least_odd p))) = set (support (rev_p p) (inv f (least_odd (rev_p p))))\<close> by blast 
+  have "(rev_p p) x = p x" unfolding rev_p_def 
+    using False by presburger
+  have "p x \<notin> ?A" using False p_also_not_in_support  
+    using assms(1) by presburger
+    
+  then  have "(on_odd  (rev_p p)) (p x) = (p x)" 
+    by (metis \<open>not_on_odd (rev_p p) x = rev_p p x\<close> \<open>rev_p p x = p x\<close> assms(1) comp_def tutte_matrix.p_is_composition tutte_matrix.rev_p_permutes tutte_matrix_axioms)
+
+  then have "inv (on_odd  (rev_p p)) (p x) = (p x)" 
+    by (metis assms(1) on_odd_p_permutes_UNIV permutes_inv_eq rev_p_permutes)
+ then show "(rev_p (rev_p p)) x = p x"  
+   by (simp add: \<open>not_on_odd (rev_p p) x = rev_p p x\<close> \<open>rev_p (rev_p p) = inv (on_odd (rev_p p)) \<circ> not_on_odd (rev_p p)\<close> \<open>rev_p p x = p x\<close>)
+qed
+qed
+
+
 
 lemma zero_det_each_has_odd_circuit:
   assumes "\<forall>p \<in> nonzero_perms x. \<exists>C \<in> connected_components (u_edges p). odd (card C) "
@@ -2408,8 +2816,104 @@ proof -
      sum ?g {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0}"
     using \<open>(\<Sum>p | p permutes UNIV. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i)) = (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i))\<close> by presburger
 
-  
+  let ?A = "nonzero_perms x"
+  let ?h = "rev_p"  
+  have "finite ?A" 
+    by simp
+  have "\<forall>a \<in> ?A.  rev_p a \<in> ?A" 
+    using assms rev_nonzero_is_nonzero by blast
+  have "\<forall>a \<in> ?A. rev_p (rev_p a) = a" 
+    by (simp add: assms nonzero_perms_def rev_rev_same)
+  have  "\<forall>a \<in> ?A. ?g a + ?g (rev_p a) = 0"
+  proof
+    fix a
+    assume "a \<in> ?A" 
+    have "a permutes (UNIV :: 'n set)" 
+      using \<open>a \<in> nonzero_perms x\<close> nonzero_perms_def by auto
+    have " \<exists>C \<in> connected_components (u_edges a). odd (card C)" 
+      using assms 
+      by (simp add: \<open>a \<in> nonzero_perms x\<close>)
+    have "?g a = - ?g (rev_p a)" using rev_opposite_value[of a x]  
+      using \<open>\<exists>C\<in>connected_components (u_edges a). odd (card C)\<close> \<open>a permutes UNIV\<close> by blast
+    then show "?g a + ?g (rev_p a) = 0" by simp
+  qed
+  have "\<forall>a \<in> ?A. a = (rev_p) a \<longrightarrow> ?g a = 0"
+  proof
+    fix a
+    assume "a \<in> ?A" 
+    then have "a permutes UNIV" 
+      by (simp add: nonzero_perms_def)
+    show "a = (rev_p) a \<longrightarrow> ?g a = 0"
+    proof
+      assume "a = (rev_p) a"
+      let ?i = "least_odd a"
+      obtain i where "i = (inv f) (least_odd a)" 
+        by auto
+      then  have "i \<in> set (support a ((inv f) (least_odd a)))"
+        using el_in_own_support 
+        using \<open>a permutes UNIV\<close> by blast
+      then have "a ((rev_p a) i) = i" 
+        using \<open>a permutes UNIV\<close> p_rev_p_same by presburger
+      then have "a (a i) = i" 
+        using \<open>a = rev_p a\<close> by auto
+      then have "(a^^2) i = i" 
+        by (metis One_nat_def funpow.simps(2) funpow_0 nat_1_add_1 o_apply plus_1_eq_Suc)
+     
+      then have "least_power a i \<le> 2" 
+   by (simp add: least_power_le)
+
+   
+      have "odd (least_power a i)" 
+        using \<open>a \<in> nonzero_perms x\<close> \<open>a permutes UNIV\<close> \<open>i = inv f (least_odd a)\<close> assms tutte_matrix.least_odd_is_odd tutte_matrix_axioms by blast
+      then have "(least_power a i) = 1" 
+        by (smt (z3) \<open>a permutes UNIV\<close> \<open>least_power a i \<le> 2\<close> dbl_simps(3) dbl_simps(5) even_numeral int_ops(2) le_antisym le_eq_less_or_eq least_power_of_permutation(2) less_one neq0_conv numerals(1) of_nat_le_iff of_nat_numeral p_is_permutation)
+      then have "(a^^1) i = i" 
+        by (metis \<open>a permutes UNIV\<close> least_power_dvd one_dvd p_is_permutation)
+      then have "a i = i" 
+        by simp
+      show "?g a = 0" 
+         using \<open>a \<in> nonzero_perms x\<close> \<open>a i = i\<close> nonzero_perms_not_id by blast
+     qed
+   qed
+   have "sum ?g ?A = 0" using dewe'[of ?A rev_p ?g] 
+     using `finite ?A` `\<forall>a \<in> ?A.  rev_p a \<in> ?A` `\<forall>a \<in> ?A. rev_p (rev_p a) = a`
+    `\<forall>a \<in> ?A. ?g a + ?g (rev_p a) = 0` `\<forall>a \<in> ?A. a = (rev_p) a \<longrightarrow> ?g a = 0` 
+     by blast
+   have "{p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0} = ?A" 
     
+   proof(safe)
+     {
+       fix p
+       assume "p permutes (UNIV:: 'n set)" 
+       assume " of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0"
+       then have "(\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0" by force
+       then show "p \<in> nonzero_perms x" unfolding nonzero_perms_def 
+         using \<open>p permutes UNIV\<close> by blast
+     }
+     {
+       fix p
+       assume "p \<in>  nonzero_perms x"
+       then show "p permutes UNIV" 
+         by (simp add: nonzero_perms_def)
+     }
+     fix p
+     assume "p \<in>  nonzero_perms x" "?g p = 0"
+     then have "(\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0" 
+unfolding nonzero_perms_def  
+  by blast
+  have "of_int (sign p) \<noteq> 0" 
+    by (simp add: sign_def)
+  then have "(\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) = 0" using `?g p = 0` 
+       by (smt (verit, best) Groups.mult_ac(2) mult.right_neutral mult_minus_right neg_equal_0_iff_equal of_int_1 of_int_minus sign_def)
+
+     then show False 
+       using \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0\<close> by blast
+   qed
+
+   then show ?thesis 
+     using \<open>(\<Sum>p\<in>nonzero_perms x. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i)) = 0\<close> \<open>det (local.tutte_matrix x) = (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i))\<close> by presburger
+ qed
+ 
 
 end
 
