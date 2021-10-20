@@ -2012,15 +2012,29 @@ qed
 definition on_odd where
   "on_odd p = (\<lambda> x. if x \<in> set (support p ((inv f) (least_odd p))) then p x else x)" 
 
-lemma on_odd_on_odd:
+definition not_on_odd where
+  "not_on_odd p = (\<lambda> x. if x \<notin> set (support p ((inv f) (least_odd p))) then p x else x)" 
+
+
+lemma on_odd_in:
   assumes "x \<in>  set (support p ((inv f) (least_odd p)))"
   shows "on_odd p x = p x" 
   unfolding on_odd_def using assms by auto
 
-lemma on_odd_not_on_odd:
+lemma on_odd_out:
   assumes "x \<notin>  set (support p ((inv f) (least_odd p)))"
   shows "on_odd p x = x" 
   unfolding on_odd_def using assms by auto
+
+lemma not_on_odd_in:
+  assumes "x \<notin>  set (support p ((inv f) (least_odd p)))"
+  shows "not_on_odd p x = p x" 
+  unfolding not_on_odd_def using assms by auto
+
+lemma not_on_odd_out:
+  assumes "x \<in>  set (support p ((inv f) (least_odd p)))"
+  shows "not_on_odd p x = x" 
+  unfolding not_on_odd_def using assms by auto
 
 
 lemma on_odd_p_permutes:
@@ -2033,10 +2047,10 @@ proof -
     fix x y
     assume "x \<in> ?A" "y \<in> ?A"  "on_odd p x = on_odd p y" 
    then have "on_odd p x = p x" 
-        using on_odd_on_odd 
+        using on_odd_in
         by blast
    then have "on_odd p y = p y" 
-        using on_odd_on_odd 
+        using on_odd_in 
         using \<open>y \<in> set (support p (inv f (least_odd p)))\<close> by blast
 
       then show "x = y" 
@@ -2063,12 +2077,144 @@ proof -
  then have "bij_betw (on_odd p) ?A ?A" unfolding bij_betw_def 
    using \<open>inj_on (on_odd p) ?A\<close> by blast
   have "(\<And>x. x \<notin> ?A \<Longrightarrow> (on_odd p) x = x)" 
-    using on_odd_not_on_odd by presburger
+    using on_odd_out by presburger
   then show " (on_odd p) permutes ?A" using  Permutations.bij_imp_permutes
     
     using \<open>bij_betw (on_odd p) (set (support p (inv f (least_odd p)))) (set (support p (inv f (least_odd p))))\<close> by blast
 qed
-   
+
+lemma on_odd_p_permutes_UNIV:
+  assumes "p permutes (UNIV::'n set)"
+  shows "(on_odd p) permutes UNIV" using on_odd_p_permutes assms 
+  by (meson bij_imp_permutes iso_tuple_UNIV_I permutes_bij)
+
+lemma not_on_odd_p_permutes:
+  assumes "p permutes (UNIV::'n set)"
+  shows "(not_on_odd p) permutes (UNIV::'n set) - (set (support p ((inv f) (least_odd p))))"
+proof -
+  let ?A = "(UNIV::'n set) - (set (support p ((inv f) (least_odd p))))"
+  have "(\<forall>x\<in>?A. \<forall>y\<in>?A. (not_on_odd p) x = (not_on_odd p) y \<longrightarrow> x = y)"
+  proof(rule+) 
+    fix x y
+    assume "x \<in> ?A" "y \<in> ?A"  "not_on_odd p x = not_on_odd p y" 
+   then have "not_on_odd p x = p x" 
+        using not_on_odd_in
+        by blast
+   then have "not_on_odd p y = p y" 
+        using not_on_odd_in 
+        using \<open>y \<in> ?A\<close> by blast
+
+      then show "x = y" 
+        by (metis \<open>not_on_odd p x = not_on_odd p y\<close> \<open>not_on_odd p x = p x\<close> assms permutes_inv_eq)
+    qed
+  then have "inj_on (not_on_odd p) ?A" 
+      using inj_on_def by blast
+    have "(not_on_odd p) ` ?A = ?A"
+    proof(rule)+
+      show "?A \<subseteq> not_on_odd p ` ?A"
+      proof
+        fix x
+        assume "x \<in> ?A"
+        then have "p x \<in> ?A" 
+          by (smt (z3) Diff_iff UNIV_I assms bij_betw_inv_into_left inv_in_support map_eq_conv p_is_permutation permutes_imp_bij)
+
+    
+        then show "x \<in> not_on_odd p ` ?A" 
+          using \<open>x \<in> ?A\<close> not_on_odd_def 
+          by (smt (z3) Diff_iff assms bij_is_surj image_iff inj_onD map_eq_conv on_odd_def on_odd_p_permutes permutes_imp_bij permutes_inj)
+
+      qed
+      fix x
+      assume "x \<in>  not_on_odd p ` ?A"  "x \<in>  set (support p (inv f (least_odd p))) " 
+     have "(inv p x) \<in> set (support p (inv f (least_odd p)))" 
+        by (smt (z3) \<open>x \<in> set (support p (inv f (least_odd p)))\<close> assms bij_is_surj map_eq_conv on_odd_def on_odd_p_permutes p_is_permutation permutation_bijective permutation_inverse permutes_inv_inv permutes_inverses(1) surj_f_inv_f)
+      then have "x \<in> ?A" 
+        by (smt (z3) \<open>x \<in> not_on_odd p ` (UNIV - set (support p (inv f (least_odd p))))\<close> assms bij_is_surj f_inv_into_f inv_into_into mem_Collect_eq p_is_permutation permutation_bijective permutation_inverse set_diff_eq tutte_matrix.not_on_odd_def tutte_matrix_axioms)
+
+      then show False 
+        using \<open>x \<in> set (support p (inv f (least_odd p)))\<close> by force
+    qed
+ then have "bij_betw (not_on_odd p) ?A ?A" unfolding bij_betw_def 
+   using \<open>inj_on (not_on_odd p) ?A\<close> by blast
+ have "(\<And>x. x \<notin> ?A \<Longrightarrow> (not_on_odd p) x = x)" 
+    using not_on_odd_out 
+    by simp
+  then show " (not_on_odd p) permutes ?A" using  Permutations.bij_imp_permutes
+    using \<open>bij_betw (not_on_odd p) (UNIV - set (support p (inv f (least_odd p)))) (UNIV - set (support p (inv f (least_odd p))))\<close> by blast
+qed
+
+lemma not_on_odd_p_permutes_UNIV:
+  assumes "p permutes (UNIV::'n set)"
+  shows "(not_on_odd p) permutes (UNIV::'n set)"
+  using not_on_odd_p_permutes assms 
+  using permutes_subset by blast
+
+lemma least_odd_inv_same:
+  assumes "p permutes (UNICV ::'n set)"
+  shows " (least_odd (inv p)) =  (least_odd p)"
+  oops
+
+lemma rev_is_composition:
+  assumes "p permutes (UNIV::'n set)"
+  shows "rev_p p = ((inv (on_odd  p)) \<circ>  not_on_odd p)"
+proof
+  let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  fix x
+  show " rev_p p x = ((inv (on_odd  p)) \<circ>  not_on_odd p) x"
+  proof(cases "x \<in> ?A")
+    case True
+    have "not_on_odd p x = x" 
+      using True not_on_odd_out by presburger
+   have " (on_odd  p) x = p x" using on_odd_in[of x "inv p"] True 
+     using on_odd_def by presburger
+   then have "inv (on_odd  p) x = (inv p) x" 
+     by (smt (verit, ccfv_threshold) assms on_odd_p_permutes_UNIV permutes_inv_eq tutte_matrix.on_odd_def tutte_matrix_axioms)
+   then have "rev_p p x = (inv p x)" 
+  by (metis \<open>on_odd p x = p x\<close> assms on_odd_def permutes_inv_eq rev_p_def)
+then show ?thesis 
+  by (simp add: \<open>inv (on_odd p) x = inv p x\<close> \<open>not_on_odd p x = x\<close>)
+next
+  case False
+  have "rev_p p x = p x" using False assms unfolding  rev_p_def 
+    by presburger
+  have "not_on_odd p x = p x" 
+    using False not_on_odd_in by presburger
+  have "inv (on_odd  p) (p x) = p x" 
+    by (smt (z3) \<open>not_on_odd p x = p x\<close> assms bij_is_surj inj_imp_surj_inv not_on_odd_def on_odd_def on_odd_p_permutes_UNIV permutes_imp_bij permutes_inj permutes_inv_inv surj_f_inv_f)
+
+  then show ?thesis 
+    using \<open>not_on_odd p x = p x\<close> \<open>rev_p p x = p x\<close> by force
+qed
+  
+qed
+
+lemma p_is_composition:
+  assumes "p permutes (UNIV::'n set)"
+  shows "p = on_odd  p \<circ>  not_on_odd p"
+proof
+  fix x
+ let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  show "p x = (on_odd p \<circ> not_on_odd p) x" 
+  proof(cases "x \<in> ?A")
+    case True
+    have "not_on_odd p x = x" 
+      using True not_on_odd_out by presburger
+    have "on_odd p x = p x" 
+      by (metis \<open>not_on_odd p x = x\<close> not_on_odd_def on_odd_def)
+    then show ?thesis 
+      by (simp add: \<open>not_on_odd p x = x\<close>)
+  next
+    case False
+     have "not_on_odd p x = p x" 
+      using False not_on_odd_in by presburger
+    have "on_odd p (p x) = p x" 
+      by (metis (full_types) \<open>not_on_odd p x = p x\<close> assms not_on_odd_def not_on_odd_p_permutes_UNIV on_odd_def permutes_univ)
+
+    then show ?thesis 
+      by (simp add: \<open>not_on_odd p x = p x\<close>)
+  qed
+qed
+
 
 lemma rev_product_is_minus:
   assumes "p permutes (UNIV::'n set)"
@@ -2126,10 +2272,144 @@ qed
 
 
 
+lemma rev_has_same_parity:
+  assumes "p permutes (UNIV::'n set)"
+ shows "evenperm p = evenperm (rev_p p)"
+proof -
+  have "permutation p" 
+    by (simp add: assms(1) p_is_permutation)
+  have "permutation (on_odd p)" 
+    by (simp add: assms(1) on_odd_p_permutes_UNIV p_is_permutation)
+  have "permutation (not_on_odd p)" 
+    by (simp add: assms(1) not_on_odd_p_permutes_UNIV p_is_permutation)
+  have "p = on_odd  p \<circ>  not_on_odd p" 
+    by (simp add: assms(1) p_is_composition)
+  have "(rev_p p) = (inv (on_odd  p)) \<circ>  not_on_odd p"
+    using rev_is_composition 
+    using assms(1) by auto
+  have "evenperm p \<longleftrightarrow> evenperm (on_odd  p) = evenperm (not_on_odd p)" 
+    by (metis \<open>p = on_odd p \<circ> not_on_odd p\<close> \<open>permutation (not_on_odd p)\<close> \<open>permutation (on_odd p)\<close> evenperm_comp)
+
+  have "evenperm (on_odd  p) = evenperm (inv (on_odd  p))" 
+    by (simp add: \<open>permutation (on_odd p)\<close> evenperm_inv)
+  have "evenperm (rev_p p) \<longleftrightarrow> evenperm (inv (on_odd  p)) = evenperm (not_on_odd p)"
+    by (simp add: \<open>permutation (not_on_odd p)\<close> \<open>permutation (on_odd p)\<close> \<open>rev_p p = inv (on_odd p) \<circ> not_on_odd p\<close> evenperm_comp permutation_inverse)
+  then show ?thesis 
+    by (simp add: \<open>evenperm p = (evenperm (on_odd p) = evenperm (not_on_odd p))\<close> \<open>permutation (on_odd p)\<close> evenperm_inv)
+qed
+
+lemma rev_same_sign:
+  assumes "p permutes (UNIV :: 'n set)" 
+  shows "of_int (sign p) = of_int (sign (rev_p p))" 
+  by (simp add: assms rev_has_same_parity sign_def)
+
+lemma rev_opposite_value:
+  assumes "p permutes (UNIV :: 'n set)"
+ assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C) " 
+  shows "(\<lambda>p. of_int (sign p) *
+     prod (\<lambda>i. (tutte_matrix x)$i$p i) (UNIV :: 'n set)) p = 
+ - (\<lambda>p. of_int (sign p) *
+     prod (\<lambda>i. (tutte_matrix x)$i$p i) (UNIV :: 'n set)) (rev_p p)" (is  " ?g  p = - ?g (rev_p p)")
+ 
+proof -
+  have "of_int (sign p) = of_int (sign (rev_p p))" 
+    using assms(1) rev_same_sign by blast
+  have " prod (\<lambda>i. (tutte_matrix x)$i$p i) (UNIV :: 'n set) =
+  -  prod (\<lambda>i. (tutte_matrix x)$i$(rev_p p) i) (UNIV :: 'n set)"
+    using rev_product_is_minus assms   
+    by blast
+  then show ?thesis 
+    by (simp add: \<open>of_int (sign p) = of_int (sign (rev_p p))\<close>)
+qed
+
+lemma rev_nonzero_is_nonzero:
+  assumes "p \<in> nonzero_perms x"
+  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
+  shows "rev_p p \<in> nonzero_perms x" 
+proof -
+  have "p permutes UNIV" 
+    using assms nonzero_perms_def by auto
+  have " prod (\<lambda>i. (tutte_matrix x)$i$p i) (UNIV :: 'n set) \<noteq> 0"
+    using assms unfolding nonzero_perms_def  
+    by force
+  then have " prod (\<lambda>i. (tutte_matrix x)$i$(rev_p p) i) (UNIV :: 'n set) \<noteq> 0"
+    by (simp add: \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0\<close> \<open>\<exists>C\<in>connected_components (u_edges p). odd (card C)\<close> \<open>p \<in> nonzero_perms x\<close> rev_product_is_minus \<open>p permutes UNIV\<close> add.inverse_neutral)
+  then show "rev_p p \<in> nonzero_perms x" unfolding nonzero_perms_def 
+    using \<open>p permutes UNIV\<close> rev_p_permutes by force
+qed
+
+lemma rev_least_odd_same:
+ assumes "p permutes (UNIV:: 'n set)"
+ assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
+ shows "least_odd p = least_odd (rev_p p)" 
+proof -
+  let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  let ?i = "(inv f) (least_odd p)"
+  have "odd (least_power p ?i)"  
+    using assms(1) assms(2) least_odd_is_odd by presburger
+  have "(p^^0) ?i = ?i" sledgehammer
+  have "?i \<in> ?A" 
+
+
+
+lemma rev_rev_same:
+  assumes "p permutes (UNIV:: 'n set)"
+  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
+  shows "rev_p (rev_p p) = p" 
+proof 
+  fix x
+let ?A = "(set (support p ((inv f) (least_odd p))))" 
+  have "rev_p p = ((inv (on_odd  p)) \<circ>  not_on_odd p)"
+  
+  using assms(1) rev_is_composition by auto
+  then have "rev_p (rev_p p) = ((inv (on_odd  (rev_p p))) \<circ>  not_on_odd (rev_p p))"
+    using assms(1) rev_is_composition rev_p_permutes by blast
+  then have "rev_p (rev_p p) = ((inv (on_odd  ((inv (on_odd  p)) \<circ>  not_on_odd p))) \<circ>  
+          not_on_odd ((inv (on_odd  p)) \<circ>  not_on_odd p))" 
+    by (simp add: \<open>rev_p p = inv (on_odd p) \<circ> not_on_odd p\<close>)
+ 
+  show "rev_p (rev_p p) x = p x"
+  proof(cases "x \<in> ?A")
+    case True
     
-      
+    then show ?thesis sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
 
+lemma zero_det_each_has_odd_circuit:
+  assumes "\<forall>p \<in> nonzero_perms x. \<exists>C \<in> connected_components (u_edges p). odd (card C) "
+  shows "det (tutte_matrix x) = 0"
+proof -
+  let ?g = "(\<lambda>p. of_int (sign p) *
+     prod (\<lambda>i. (tutte_matrix x)$i$p i) (UNIV :: 'n set))" 
+  have "finite {p. p permutes (UNIV :: 'n set)}" 
+    by simp
+  then have "{p. p permutes (UNIV :: 'n set)} = 
+        {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0 } \<union> 
+            {p. p permutes (UNIV :: 'n set) \<and> ?g p = 0}" by auto
+  have " {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0 } \<inter> 
+            {p. p permutes (UNIV :: 'n set) \<and> ?g p = 0} = {}" by auto
+  then have "sum ?g {p. p permutes (UNIV :: 'n set)} = 
+            sum ?g  {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0 } + 
+            sum ?g  {p. p permutes (UNIV :: 'n set) \<and> ?g p = 0 }"
+    
+    by (simp add: \<open>{p. p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0} \<inter> {p. p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) = 0} = {}\<close> \<open>finite {p. p permutes UNIV}\<close> \<open>{p. p permutes UNIV} = {p. p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0} \<union> {p. p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) = 0}\<close>  sum.union_disjoint)
+  have " sum ?g  {p. p permutes (UNIV :: 'n set) \<and> ?g p = 0 } = 0" 
+    by auto
+  then have "sum ?g {p. p permutes (UNIV :: 'n set)} = 
+            sum ?g  {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0 }"  
+    by (simp add: \<open>(\<Sum>p | p permutes UNIV. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i)) = (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i)) + (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) = 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i))\<close>)
 
+  have "det (tutte_matrix x) =  sum ?g {p. p permutes (UNIV :: 'n set)}" 
+    using tutte_matrix_det by force
+  then have "det (tutte_matrix x) = 
+     sum ?g {p. p permutes (UNIV :: 'n set) \<and> ?g p \<noteq> 0}"
+    using \<open>(\<Sum>p | p permutes UNIV. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i)) = (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i) \<noteq> 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix x $ i $ p i))\<close> by presburger
+
+  
+    
 
 end
 
