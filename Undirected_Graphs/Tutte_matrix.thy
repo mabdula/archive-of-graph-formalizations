@@ -1,40 +1,29 @@
 theory Tutte_matrix
   imports "HOL-Algebra.Cycles" "HOL-Analysis.Determinants" Tutte_theorem3
- "HOL-Library.Poly_Mapping"
+    "HOL-Library.Poly_Mapping"
 begin
 
 
 text \<open>Embedding of indeterminates and constants in type-class polynomials,
   can be used as constructors.\<close>
-(* Author: Andreas Lochbihler, ETH Zurich
+  (* Author: Andreas Lochbihler, ETH Zurich
    Author: Florian Haftmann, TU Muenchen
   MPoly_Type.thy from package Polynimials
 *)
 
 definition Var\<^sub>0 :: "'a \<Rightarrow> ('a \<Rightarrow>\<^sub>0 nat) \<Rightarrow>\<^sub>0 'b::{one,zero}" where
   "Var\<^sub>0 n \<equiv> Poly_Mapping.single (Poly_Mapping.single n 1) 1"
-definition Const\<^sub>0 :: "'b \<Rightarrow> ('a \<Rightarrow>\<^sub>0 nat) \<Rightarrow>\<^sub>0 'b::zero" where "Const\<^sub>0 c \<equiv> Poly_Mapping.single 0 c"
-
-lemma Const\<^sub>0_one: "Const\<^sub>0 1 = 1"
-  by (simp add: Const\<^sub>0_def)
-
-lemma Const\<^sub>0_numeral: "Const\<^sub>0 (numeral x) = numeral x"
-  by (auto intro!: poly_mapping_eqI simp: Const\<^sub>0_def lookup_numeral)
-
-lemma Const\<^sub>0_minus: "Const\<^sub>0 (- x) = - Const\<^sub>0 x"
-  by (simp add: Const\<^sub>0_def single_uminus)
-
-lemma Const\<^sub>0_zero: "Const\<^sub>0 0 = 0"
-  by (auto intro!: poly_mapping_eqI simp: Const\<^sub>0_def)
-
-lemma Var\<^sub>0_power: "Var\<^sub>0 v ^ n = Poly_Mapping.single (Poly_Mapping.single v n) 1"
-  by (induction n) (auto simp: Var\<^sub>0_def mult_single single_add[symmetric])
 
 text \<open>end of definitions taken from 
  MPoly_Type.thy from package Polynimials\<close>
 
 text \<open>this function is used to prove if a determinant is zero
 when we have a corresponding inverse element\<close>
+
+lemma var_not_zero:
+  shows "((Var\<^sub>0 n) :: ('a \<Rightarrow>\<^sub>0 nat) \<Rightarrow>\<^sub>0 real) \<noteq> 0" unfolding Var\<^sub>0_def 
+  by (smt (z3) lookup_single_eq single_zero)
+
 
 lemma sum_of_values_cancel_out:
   fixes A :: "'a  set"
@@ -115,17 +104,17 @@ begin
 
 text \<open>random orientation of the edges. 
     CURRENTLY THE SEED IS (1, 1). NEEDS TO BE CHANGED.\<close>
- 
+
 
 definition get_oriented :: "'a \<Rightarrow> 'a \<Rightarrow> ('a \<times> 'a)" where
-"get_oriented a b = (if fst (Random.range (2::natural) (1, 1)) = 1 then (a, b) else (b, a))"
+  "get_oriented a b = (if fst (Random.range (2::natural) (1, 1)) = 1 then (a, b) else (b, a))"
 
 lemma get_oriented_either_direction:
   shows "get_oriented a b = (a, b) \<or> get_oriented a b = (b, a)"
   by (meson get_oriented_def)
 
 definition oriented_edges :: " ('a \<times> 'a) set"  where 
-  "oriented_edges  = {get_oriented a b| a b.   {a, b} \<in>  E \<and> a < b}"
+  "oriented_edges  = {get_oriented a b| a b. {a, b} \<in>  E \<and> a < b}"
 
 lemma univ_is_finite:
   "finite (UNIV :: 'a set)" 
@@ -138,6 +127,17 @@ lemma oriented_edges[elim?]:
   unfolding oriented_edges_def  
   unfolding get_oriented_def
   by (smt (z3) fst_conv insert_commute mem_Collect_eq prod.sel(2))
+
+lemma one_direction_in_oriented:
+  assumes "{a, b} \<in> E"
+  shows "(a, b) \<in> oriented_edges \<or> (b, a) \<in> oriented_edges" 
+proof -
+  have "a \<noteq> b" 
+    using assms graph by fastforce
+  then show ?thesis  unfolding oriented_edges_def 
+    unfolding get_oriented_def 
+    by (smt (z3) CollectI assms insert_commute neqE)
+qed
 
 text \<open>We define the Tutte matrix. On the rows and columns we have 
 the vertices. If we have an edge in the oriented version of the graph, we put 
@@ -169,7 +169,7 @@ proof -
     using assms by fastforce
 qed
 
-lemma not_in_edges:
+lemma not_in_edges_tutte_zero:
   assumes "{i, j} \<notin> E"
   shows "tutte_matrix $i$j = 0"
 proof -
@@ -182,95 +182,58 @@ proof -
     by (simp add: \<open>(i, j) \<notin> oriented_edges\<close> \<open>(j, i) \<notin> oriented_edges\<close>)
 qed
 
+lemma in_edges:
+  assumes "{i, j} \<in> E"
+  shows "tutte_matrix $i$j \<noteq> 0"
+proof(cases "(i, j) \<in> oriented_edges")
+  case True
+  then show ?thesis using in_oriented 
+    by (simp add: var_not_zero)
+next
+  case False
+  have "(j, i) \<in> oriented_edges" 
+    using one_direction_in_oriented 
+      assms  False by blast
+  then show ?thesis 
+    by (simp add: rev_in_oriented var_not_zero)
+qed
+
+lemma zero_tutte_not_in_oriented:
+  assumes "tutte_matrix $i$j = 0"
+  shows "(i, j) \<notin> oriented_edges" 
+proof
+  assume "(i, j) \<in> oriented_edges"
+  then have "tutte_matrix $i$j = Var\<^sub>0 {i, j}" 
+    using in_oriented assms by blast 
+  have "Poly_Mapping.lookup (Var\<^sub>0 {i, j}) ((Poly_Mapping.single {i, j} 1)) \<noteq> (0::real)" 
+    by (simp add: Var\<^sub>0_def)
+  then show False using assms 
+    using \<open>local.tutte_matrix $ i $ j = Var\<^sub>0 {i, j}\<close> by fastforce
+qed
+
+lemma tutte_skew_symmetric:
+  shows "tutte_matrix $i$j = - tutte_matrix $j$i"
+  by (metis (no_types, hide_lams) add.inverse_inverse add.inverse_neutral in_oriented 
+      insert_commute not_in_edges_tutte_zero one_direction_in_oriented rev_in_oriented)
+
 lemma zero_then_not_in_edges:
   assumes "tutte_matrix $i$j = 0"
   shows  "{i, j} \<notin> E"
 proof -
-  have "(i, j) \<notin> oriented_edges" 
-  proof
-    assume "(i, j) \<in> oriented_edges"
-    then have "tutte_matrix $i$j = Var\<^sub>0 {i, j}" 
-      using in_oriented assms by blast 
-    have "Poly_Mapping.lookup (Var\<^sub>0 {i, j}) ((Poly_Mapping.single {i, j} 1)) \<noteq> (0::real)" 
-      by (simp add: Var\<^sub>0_def)
-    then show False using assms 
-      using \<open>local.tutte_matrix $ i $ j = Var\<^sub>0 {i, j}\<close> by fastforce
-  qed
-  have "(j, i) \<notin> oriented_edges" 
-  proof
-    assume "(j, i) \<in> oriented_edges"
-    then have "tutte_matrix $i$j = - Var\<^sub>0 {i, j}" 
-      using rev_in_oriented assms by blast 
-    have "Poly_Mapping.lookup (Var\<^sub>0 {i, j}) ((Poly_Mapping.single {i, j} 1)) \<noteq> (0::real)" 
-      by (simp add: Var\<^sub>0_def)
-    then show False using assms 
-      using \<open>local.tutte_matrix $ i $ j = - Var\<^sub>0 {i, j}\<close> by fastforce
-  qed 
-   
-  show ?thesis 
-  proof(rule ccontr)
-    assume "\<not> {i, j} \<notin> E" 
-    then have "{i, j} \<in> E" by auto
-    
-    show False
-    proof(cases "i < j")
-      case True
-      then have "get_oriented i j \<in> oriented_edges" 
-        using \<open>{i, j} \<in> E\<close> oriented_edges_def by auto
-  then show ?thesis 
-    by (metis \<open>(i, j) \<notin> oriented_edges\<close> \<open>(j, i) \<notin> oriented_edges\<close> get_oriented_either_direction)
-next
-  case False
-  have "j < i" 
-    by (metis False \<open>{i, j} \<in> E\<close> doubleton_eq_iff graph neqE)
- then have "get_oriented j i \<in> oriented_edges" 
-        using \<open>{i, j} \<in> E\<close> oriented_edges_def 
-        by (smt (verit, del_insts) CollectI insert_commute)
-      then show ?thesis 
-  by (metis \<open>(i, j) \<notin> oriented_edges\<close> \<open>(j, i) \<notin> oriented_edges\<close> get_oriented_either_direction)
-qed
- 
-qed
+  have "(i, j) \<notin> oriented_edges" using zero_tutte_not_in_oriented 
+    by (simp add: assms)
+  moreover have "(j, i) \<notin> oriented_edges" 
+    by (metis add.inverse_neutral assms tutte_skew_symmetric 
+        zero_tutte_not_in_oriented)
+  ultimately show ?thesis 
+    using  one_direction_in_oriented by blast
 qed
 
 lemma not_in_both_oriented:
   assumes "(j, i) \<notin> oriented_edges"
   assumes "(i, j) \<notin> oriented_edges" 
-  shows "{i, j} \<notin> E"
-  proof(rule ccontr)
-    assume "\<not> {i, j} \<notin> E" 
-    then have "{i, j} \<in> E" by auto
-    
-    show False
-    proof(cases "i < j")
-      case True
-      then have "get_oriented i j \<in> oriented_edges" 
-        using \<open>{i, j} \<in> E\<close> oriented_edges_def by auto
-  then show ?thesis 
-    by (metis \<open>(i, j) \<notin> oriented_edges\<close> \<open>(j, i) \<notin> oriented_edges\<close> get_oriented_either_direction)
-next
-  case False
-  have "j < i" 
-    by (metis False \<open>{i, j} \<in> E\<close> doubleton_eq_iff graph neqE)
- then have "get_oriented j i \<in> oriented_edges" 
-        using \<open>{i, j} \<in> E\<close> oriented_edges_def 
-        by (smt (verit, del_insts) CollectI insert_commute)
-      then show ?thesis 
-  by (metis \<open>(i, j) \<notin> oriented_edges\<close> \<open>(j, i) \<notin> oriented_edges\<close> get_oriented_either_direction)
-qed
-qed
- 
-lemma edge_not_in_E_zero_elem:
-  assumes "{i, j} \<notin> E"
-  shows "tutte_matrix$i$j = 0" 
-proof -
-  have "(i, j) \<notin> oriented_edges" using assms 
-    by (meson oriented_edges)
-  have "(j, i) \<notin> oriented_edges" using assms 
-    by (metis insert_commute oriented_edges)
-  then show ?thesis 
-    by (simp add: \<open>(i, j) \<notin> oriented_edges\<close> local.tutte_matrix_def)
-qed
+  shows "{i, j} \<notin> E" 
+  using assms one_direction_in_oriented by auto
 
 lemma tutte_matrix_det:
   "det (tutte_matrix) =  sum (\<lambda>p. of_int (sign p) *
@@ -301,7 +264,7 @@ definition nonzero_perms :: "('a \<Rightarrow> 'a) set "where
 lemma nonzero_perms_elim[elim]:
   assumes "p \<in> nonzero_perms"
   shows "p permutes (UNIV :: 'a set)"  
-        "prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV :: 'a set) \<noteq> 0"
+    "prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV :: 'a set) \<noteq> 0"
   using assms 
   unfolding nonzero_perms_def
    apply blast
@@ -334,29 +297,21 @@ lemma u_edges_intro[intro]:
 lemma nonzero_perms_nonzero_tutte:
   assumes "p \<in> nonzero_perms"
   shows "\<forall>i. tutte_matrix$i$p i \<noteq> 0"
- proof
-   fix i
-    have "prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV \<noteq> 0"
+proof
+  fix i
+  have "prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV \<noteq> 0"
     using assms nonzero_perms_elim(1) nonzero_perms_elim(2) by blast
-    have "finite (UNIV :: 'a set)" 
-      by simp
-    show "(tutte_matrix)$i$p i \<noteq> 0"
-    proof(rule ccontr)
-      assume " \<not> local.tutte_matrix  $ i $ p i \<noteq> 0"
-      then have "local.tutte_matrix  $ i $ p i = 0" by auto
-      then have "prod (\<lambda>i. (tutte_matrix )$i$p i) UNIV  = 0"
-        using Groups_Big.comm_semiring_1_class.prod_zero \<open>finite UNIV\<close> 
-        by fast
-      then show False 
-        using \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix  $ i $ p i) \<noteq> 0\<close> by blast  
-    qed
-  qed
+  also have "finite (UNIV :: 'a set)" 
+    by simp
+  ultimately show "(tutte_matrix)$i$p i \<noteq> 0" 
+    by (meson UNIV_I prod_zero)
+qed
 
 lemma nonzero_edge_in_graph:
   assumes "p \<in> nonzero_perms"
-  shows "{i, p i} \<in> E"
+  shows "{i, p i} \<in> E" 
   using assms nonzero_perms_nonzero_tutte 
-        tutte_matrix.not_in_edges tutte_matrix_axioms by blast
+    not_in_edges_tutte_zero by blast
 
 lemma nonzero_perms_u_edges_in_graph:
   assumes "p \<in> nonzero_perms"
@@ -398,14 +353,8 @@ proof(rule ccontr)
   then have "p i = i" by auto
   have "{i, i} \<notin> E" 
     using graph by fastforce
-  then have "tutte_matrix $ i $ p i = 0" 
-    using edge_not_in_E_zero_elem 
-    by (metis \<open>\<not> p i \<noteq> i\<close>)
-  then have "prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV = 0"
-    using Groups_Big.comm_semiring_1_class.prod_zero 
-      finite_class.finite_UNIV by fast  
-  then show False using assms(1) nonzero_perms_def
-    by blast   
+  then show False 
+    by (metis \<open>p i = i\<close> assms nonzero_edge_in_graph)
 qed
 
 lemma edges_construct_a_path:
@@ -423,9 +372,9 @@ next
   have "\<forall>i<length xs-1. {xs ! i, xs ! (i + 1)} \<in> A" 
     using Cons.prems  less_diff_conv by auto
   have " {(a # xs) ! 0, (a # xs) ! (0 + 1)} \<in> A" 
-    using Cons.prems
-    by (metis Nat.le_diff_conv2 \<open>length (a # xs) - 1 = length xs\<close>
-        add_leD2 length_greater_0_conv list.size(3) not_one_le_zero one_add_one)
+    using Cons.prems 
+    by (metis Nat.le_diff_conv2 \<open>length (a # xs) - 1 = length xs\<close> add_leD2 length_greater_0_conv
+        list.size(3) nat_1_add_1 not_one_le_zero)
   then have "{a, xs!0} \<in> A" 
     by simp
   show ?case
@@ -433,15 +382,13 @@ next
     case True
     have "a \<in> Vs A" 
       by (meson \<open>{a, xs ! 0} \<in> A\<close> edges_are_Vs) 
-    have "path A [a]" 
-      by (simp add: \<open>a \<in> Vs A\<close>)
     then show ?thesis 
       by (simp add: True)
   next
     case False
     have "xs \<noteq> []" 
       by (simp add: False)
-    show ?thesis
+    show ?thesis 
     proof(cases "size xs = 1")
       case True
       have "xs!0 \<in> Vs A" 
@@ -454,10 +401,11 @@ next
         using \<open>xs = [xs ! 0]\<close> by auto
     next
       case False
-      have " path A xs"
+      have "2 \<le> length xs" 
+        using Cons.prems(2) False \<open>length (a # xs) - 1 = length xs\<close> by linarith
+      then have "path A xs"
         using Cons.hyps \<open>\<forall>i<length xs-1. {xs ! i, xs ! (i + 1)} \<in> A\<close> 
-        by (metis False Suc_leI \<open>xs \<noteq> []\<close> length_greater_0_conv
-            less_one nat_neq_iff one_add_one plus_1_eq_Suc)
+        by blast
       have "xs = hd xs # tl xs" 
         by (simp add: \<open>xs \<noteq> []\<close>)
       then have "{a, hd xs} \<in> A" 
@@ -470,12 +418,10 @@ qed
 
 lemma circuit_is_upath:
   assumes "p permutes (UNIV::'a set)"
-  shows "path (u_edges p) (support p i)"
+  shows "path (u_edges p) (support p i)" 
 proof(cases "p i \<noteq> i")
   case True
   let ?xs = "support p i"
-  have "\<forall>j <size ?xs. ?xs!j = ((p^^j) i)" 
-    by simp
   have "\<forall>i < size ?xs-1. {?xs!i, ?xs!(i+1)} \<in> (u_edges p)"
     using even_circuits_connected_component' 
     by auto
@@ -487,7 +433,7 @@ proof(cases "p i \<noteq> i")
   then have "size (support p i) \<ge> 2" 
     by simp 
   then show "path (u_edges p) (support p i)" 
-    using \<open>\<forall>ia<length (support p i) - 1. {support p i ! ia, support p i ! (ia + 1)} \<in> u_edges p\<close> 
+    using \<open>\<forall>i < size ?xs-1. {?xs!i, ?xs!(i+1)} \<in> (u_edges p)\<close> 
       edges_construct_a_path by blast
 next
   case False
@@ -497,19 +443,14 @@ next
     using u_edges_def by auto
   then have "i \<in> Vs (u_edges p)" 
     by (meson edges_are_Vs)
-  then have "path (u_edges p) [i]" 
-    by simp
   have "(p^^(Suc 0)) i = i" using `p i = i` 
     by auto
   then have "(p^^1) i = i" 
     by simp
   then have "least_power p i = 1" 
     by (meson least_power_minimal nat_dvd_1_iff_1)
-  then have "support p i = [i]" 
-    by simp
-  then have "(support p i) = [i]" by auto
   then show ?thesis 
-    using \<open>path (u_edges p) [i]\<close> by presburger
+    by (simp add: \<open>i \<in> Vs (u_edges p)\<close>)
 qed 
 
 
@@ -518,6 +459,165 @@ lemma uedge_in_circuit:
   shows "{(support p i)!j, (support p i)!(Suc j)} \<in> u_edges p"
   using assms even_circuits_connected_component' by force
 
+lemma mod_least_power_same:
+  assumes "permutation p" 
+  assumes "(p ^^ n) a = b"
+  shows "(p^^(n mod (least_power p a))) a = b"
+proof (cases "n = 0", simp)
+  {
+    let ?lpow = "least_power p" 
+    assume "n \<noteq> 0" then have "n > 0" by simp
+    have  "(p ^^ (?lpow a)) a = a" 
+      using assms  
+      by (meson least_power_of_permutation(1))
+    hence aux_lemma: "(p ^^ ((?lpow a) * k)) a = a" for k :: nat
+      by (induct k) (simp_all add: funpow_add)
+
+    have "(p ^^ (n mod ?lpow a)) ((p ^^ (n - (n mod ?lpow a))) a) = (p ^^ n) a"
+      by (metis add_diff_inverse_nat funpow_add mod_less_eq_dividend not_less o_apply)
+    with \<open>(p ^^ n) a = b\<close> 
+    show "(p ^^ (n mod ?lpow a)) a = b"
+      using aux_lemma by (simp add: minus_mod_eq_mult_div) 
+  }
+  show "n = 0 \<Longrightarrow> a = b" 
+    using assms(2) by auto
+qed
+
+lemma elemnets_in_support_expo:
+  fixes n :: "nat"
+  assumes "permutation p" 
+  assumes "x \<in> set (support p i)"
+  assumes "y = (p^^n) x"
+  shows "y \<in> set (support p i)" 
+proof -
+  let ?len = "least_power p i"
+  obtain k where "(p^^k) i = x \<and> k < least_power p i" using assms 
+    by fastforce
+  have "((p^^n)\<circ>(p^^k)) i = y" 
+    by (simp add: \<open>(p ^^ k) i = x \<and> k < least_power p i\<close> assms(3)) 
+  then have "(p^^(n+k)) i = y" 
+    by (simp add: funpow_add) 
+  then have "(p^^((n+k) mod ?len)) i = y" 
+    by (simp add: assms(1) mod_least_power_same)
+  have "((n+k) mod ?len) < ?len" 
+    by (meson assms(1) least_power_of_permutation(2) mod_less_divisor)
+  then have "(support p i)!((n+k) mod ?len) = y" 
+    by (simp add: \<open>(p ^^ ((n + k) mod least_power p i)) i = y\<close>)
+  then show ?thesis  
+    using \<open>(n + k) mod least_power p i < least_power p i\<close> by force
+qed
+
+lemma inv_least_power_same:
+  assumes "p permutes (UNIV:: 'a set)"
+  shows "least_power p i = least_power (inv p) i" 
+proof -
+  let ?l = "least_power p i" 
+  let ?inv_l = "least_power (inv p) i"
+  have "(p^^?l) i = i" 
+    by (simp add: assms least_power_of_permutation(1) p_is_permutation)
+  have "((inv p)^^(?inv_l)) i = i" 
+    by (simp add: assms least_power_of_permutation(1) p_is_permutation permutation_inverse)
+  then have "i = (p^^?inv_l) i" 
+    by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
+
+  show ?thesis
+  proof(rule ccontr)
+    assume "?l \<noteq> ?inv_l"
+    then have "?l < ?inv_l" 
+      by (metis \<open>i = (p ^^ least_power (inv p) i) i\<close> assms le_eq_less_or_eq least_power_le least_power_of_permutation(2) p_is_permutation permutation_inverse)
+
+    then show False 
+      by (metis \<open>(p ^^ least_power p i) i = i\<close> assms bij_betw_inv_into_left bij_fn bij_is_surj inv_fn leD least_power_le least_power_of_permutation(2) p_is_permutation permutes_imp_bij range_eqI)
+  qed
+qed
+
+
+lemma el_in_own_support:
+  assumes "p permutes (UNIV :: 'a set)"
+  shows "i \<in> set (support p i)" 
+proof -
+  have "(p^^0) i = i" by simp
+  then have "support p i!0 = i" 
+    by (simp add: assms least_power_of_permutation(2) p_is_permutation)
+  then show ?thesis 
+    by (metis assms least_power_of_permutation(2) length_map length_upt nth_mem p_is_permutation zero_less_diff)
+qed
+
+lemma p_diff_inv_p_pow:
+  assumes "permutation p"
+  assumes "n \<ge> k"
+  shows "((inv p)^^ k) ((p^^n) i) = (p^^(n-k)) i" 
+proof -
+  have "(p^^n) i = ((p^^k) \<circ> (p^^(n-k))) i" 
+    by (metis add_diff_inverse_nat assms(2) funpow_add not_le)
+  then show ?thesis 
+    by (metis assms(1) bij_fn bij_inv_eq_iff comp_apply inv_fn permutation_bijective)
+qed
+
+lemma inv_support_same:
+  assumes "permutation p"
+  shows "set (support p i) = set (support (inv p) i)" 
+proof(safe)
+  let ?len = "least_power p i"  
+  have "i \<in> set (support (inv p) i)" 
+    using el_in_own_support assms 
+    by (smt (z3) least_power_of_permutation(1) map_eq_conv permutation_inverse range_eqI support_set)
+
+  { 
+    fix x
+    assume "x \<in> set (support p i)"
+    then obtain j where "x = (p^^j) i \<and> j < least_power p i" 
+      by fastforce
+    have "i = ((inv p)^^?len) i" 
+      by (metis assms bij_fn bij_inv_eq_iff inv_fn least_power_of_permutation(1) permutation_bijective)
+
+
+    then have "x = (p^^j) (((inv p)^^?len) i)" 
+      using \<open>x = (p ^^ j) i \<and> j < least_power p i\<close> by presburger
+    then have "x = ((inv p)^^(?len - j)) i"  
+      using p_diff_inv_p_pow[of p j ?len] 
+      by (metis \<open>x = (p ^^ j) i \<and> j < least_power p i\<close> assms diff_diff_cancel diff_le_self least_power_of_permutation(1) less_imp_le_nat p_diff_inv_p_pow)
+
+    then show "x \<in>  set (support (inv p) i)" using elemnets_in_support_expo[of "inv p" i i x "?len - j"] 
+      using \<open>i \<in> set (support (inv p) i)\<close> assms p_is_permutation permutation_inverse by blast
+  }
+  fix x
+  assume "x \<in>  set (support (inv p) i)"
+  then obtain j where "x = ((inv p)^^j) i \<and> j < least_power (inv p) i" 
+    by fastforce
+  have "i = (p^^?len) i" 
+    by (simp add: assms least_power_of_permutation(1) p_is_permutation)
+
+  then have "x = ((inv p)^^j) (((p)^^?len) i)" 
+    using \<open>x = ((inv p) ^^ j) i \<and> j < least_power (inv p) i\<close> by presburger
+  then have "x = (p^^(?len - j)) i"   using p_diff_inv_p_pow[of "inv p" j ?len] 
+
+    by (smt (z3) \<open>i = (p ^^ least_power p i) i\<close> \<open>x = (inv p ^^ j) i \<and> j < least_power (inv p) i\<close> assms bij_is_surj dual_order.strict_trans funpow_diff inj_iff inv_inv_eq least_power_le least_power_of_permutation(2) not_le p_diff_inv_p_pow permutation_bijective permutation_inverse surj_iff) 
+
+
+
+  then show "x \<in>  set (support p i)"  using elemnets_in_support_expo[of "p" i i x "?len - j"] 
+    using assms least_power_of_permutation(2) by force
+qed
+
+lemma elemnets_in_support_expo':
+  fixes n :: "nat"
+  assumes "permutation p" 
+  assumes "x \<in> set (support p i)"
+  assumes "x = (p^^n) y"
+  shows "y \<in> set (support p i)"
+proof -
+  have "permutation (inv p)" 
+    using assms(1) permutation_inverse by blast
+  have "x \<in>  set (support (inv p) i)" 
+    using assms(1) assms(2) inv_support_same by fastforce
+  have "((inv p)^^n) x = y" 
+    by (metis assms(1) assms(3) bij_fn bij_inv_eq_iff inv_fn permutation_bijective)
+  then have "y \<in> set (support (inv p) i)" 
+    using \<open>permutation (inv p)\<close> \<open>x \<in> set (support (inv p) i)\<close> elemnets_in_support_expo by fastforce
+  then show ?thesis 
+    using assms(1) assms(2) inv_support_same by fastforce
+qed
 
 lemma support_is_connected_component:
   assumes "p permutes (UNIV :: 'a set)"
@@ -525,15 +625,12 @@ lemma support_is_connected_component:
   assumes "i \<in> C"
   shows "set (support p i) = C" (is "set ?l = C")
 proof(safe)
-  have "(support p i)!0 = (p^^0) i" 
-    by (simp add: assms(1) least_power_of_permutation(2) p_is_permutation)
-  then have "hd (support p i) = i" 
+  have "hd (support p i) = i" 
     by (simp add: assms(1) hd_conv_nth least_power_of_permutation(2) p_is_permutation)
 
   then have "i \<in> set ?l" 
-    by (metis Nil_is_map_conv assms(1) least_power_of_permutation(2)
-        length_upt less_numeral_extra(3) list.set_sel(1) list.size(3)
-        p_is_permutation zero_less_diff)
+    by (metis Nil_is_map_conv assms(1) finite le_zero_eq least_power_of_permutation(2) 
+        list.set_sel(1) neq0_conv permutation_permutes upt_eq_Nil_conv)  
   {
     fix x
     assume "x \<in> set ?l" 
@@ -559,223 +656,70 @@ proof(safe)
   }
   fix x 
   assume "x \<in> C"
+  obtain xs where "walk_betw (u_edges p) x xs i" 
+    by (meson \<open>x \<in> C\<close> assms(2) assms(3) same_con_comp_walk)
+  then have "hd xs = x" by auto
+  then have "x \<in> set xs" 
+    using \<open>walk_betw (u_edges p) x xs i\<close> by force
+  have "path (u_edges p) xs" 
+    by (meson \<open>walk_betw (u_edges p) x xs i\<close> walk_between_nonempty_path(1))
+  have "last xs = i" 
+    using \<open>walk_betw (u_edges p) x xs i\<close> by auto
+  have "\<forall>y \<in> set xs. \<exists>n. (p^^n) i = y" using `path (u_edges p) xs` `last xs = i`
+  proof(induct xs)
+    case path0 
+    then show ?case by auto
+  next
+    case (path1 v)
+    have "v = i" 
+      using path1.prems by auto
+    then show ?case 
+      by (metis funpow_0 list.set_cases neq_Nil_conv set_ConsD)
+  next
+    case (path2 v v' vs)
+    have "v = p v' \<or> v' = p v" 
+      by (metis doubleton_eq_iff path2.hyps(1) u_edges_elim)
 
-  show " x \<in> set ?l"
-  proof(rule ccontr)
-    assume "x \<notin> set ?l" 
-    obtain xs where "walk_betw (u_edges p) i xs x" 
-      by (meson \<open>x \<in> C\<close> assms(2) assms(3) same_con_comp_walk)
-    show False
-    proof(cases "set  (edges_of_path xs) = {}")
+    obtain n where "(p^^n) i = v'" 
+      using path2.hyps(3) path2.prems by auto
+    then have "v' \<in> set (support p i)" 
+      using elemnets_in_support_expo[of p i i v' n] 
+      using \<open>i \<in> set (support p i)\<close> assms(1) p_is_permutation by blast
+
+    then show ?case 
+    proof(cases "v = p v'")
       case True
-      have "length (edges_of_path xs) = 0" 
-        using True by blast
-      then have "0 = length xs - 1" 
-        by (simp add: edges_of_path_length)
-      have "xs \<noteq> []" using `walk_betw (u_edges p)  i xs x` 
-        by (meson walk_nonempty) 
-      then have "length xs > 0" by fastforce
-      then have "length xs  = 1" 
-        using \<open>0 = length xs - 1\<close> by linarith
-      then obtain a where "xs = [a]" 
-        by (metis One_nat_def Suc_length_conv length_0_conv)
-      then have "a = i " using `walk_betw (u_edges p) i xs x`
-        unfolding walk_betw_def 
-        by simp
-      have "a = x" using `walk_betw (u_edges p) i xs x` `xs = [a]`
-        unfolding walk_betw_def 
-        by auto
-      have "i = x" 
-        using \<open>a = i\<close> \<open>a = x\<close> by auto
+      have "p ((p^^n) i) = v" 
+        by (simp add: True \<open>(p ^^ n) i = v'\<close>)
+      then have "(p \<circ> (p^^n)) i = v" by auto
+      then have "(p^^(n+1)) i = v" by simp
+
       then show ?thesis 
-        using \<open>i \<in> set (support p i)\<close> \<open>x \<notin> set (support p i)\<close> by blast
+        by (metis last_ConsR list.discI path2.hyps(3) path2.prems set_ConsD)
     next
       case False
-
-      have "set  (edges_of_path xs) \<noteq> {}" 
-        using False by auto
-
-      let ?P = "(\<lambda> y. y \<in> set ?l)" 
-      let ?P' = "(\<lambda> y. y \<notin> set ?l)"
-      show False
-      proof(cases "set (filter ?P' xs) = set xs")
-        case True
-        then have "\<forall>y \<in> set xs. y \<notin> set ?l" 
-          by (metis  filter_set member_filter)
-        have "hd xs \<in> set xs" 
-          by (metis False edges_of_path.simps(1) empty_set hd_in_set)
-        then have "i \<notin> set ?l" 
-          by (metis \<open>\<forall>y\<in>set xs. y \<notin> set (support p i)\<close> \<open>walk_betw (u_edges p) i xs x\<close>
-              walk_between_nonempty_path(3))
-        then show False 
-          using \<open>i \<in> set (support p i)\<close> by blast
-      next
-        case False 
-        then show ?thesis 
-        proof(cases "set (filter ?P' xs) = {}")
-          case True
-          have "last xs \<in> set xs" 
-            by (metis False True empty_set last_in_set)
-          then have "x \<in> set (filter ?P' xs)" 
-            by (metis True \<open>walk_betw (u_edges p) i xs x\<close> \<open>x \<notin> set (support p i)\<close> 
-                filter_empty_conv set_empty walk_between_nonempty_path(4))
-          then have "x \<in> set ?l" 
-            by (metis True empty_iff)
-          then show ?thesis 
-            using \<open>x \<notin> set (support p i)\<close> by blast
-        next
-          case False
-          case False
-          obtain y where "y = hd (filter ?P' xs)" 
-            by blast
-          have "(filter ?P' xs) = y# (tl (filter ?P' xs))" 
-            by (metis False \<open>y = hd (filter (\<lambda>y. y \<notin> set (support p i)) xs)\<close> hd_Cons_tl list.set(1))
-          then  obtain ys zs where split_xs: "xs = ys @ y # zs \<and> (\<forall>u\<in>set ys. \<not> ?P' u) \<and> ?P' y"
-            using Cons_eq_filterD 
-            by (metis (no_types, lifting))
-          then have "xs = (ys @ [y]) @ zs" by simp
-          then have "path (u_edges p) (ys @ [y])" 
-            by (metis \<open>walk_betw (u_edges p)  i xs x\<close> path_pref walk_between_nonempty_path(1))
-          show False 
-          proof(cases "ys = []")
-            case True
-            have "hd xs = y" 
-              by (simp add: True split_xs)
-            then have "i = y" 
-              by (metis \<open>walk_betw (u_edges p) i xs x\<close> walk_between_nonempty_path(3))
-
-            then show ?thesis 
-              using \<open>i \<in> set ?l\<close> split_xs by blast
-
-          next
-            case False
-            have "last ys \<in> set ?l" 
-              using False split_xs last_in_set by blast
-            have "{last ys, y} \<in> set (edges_of_path xs)" 
-              by (simp add: False split_xs edges_of_path_append_3)
-            then have "{last ys, y} \<in> u_edges p" 
-              by (meson \<open>walk_betw (u_edges p)  i xs x\<close>
-                  path_ball_edges walk_between_nonempty_path(1))
-            then obtain j where js:"{last ys, y} = {j, (p j)} \<and> j \<in> (UNIV:: 'a set)"
-                unfolding u_edges_def 
-                by blast
-            then have "(last ys = j \<and> y = (p j)) \<or> (last ys = (p j) \<and> y = j)"
-              by (meson doubleton_eq_iff)
-            show False 
-            proof(cases "(last ys = j \<and> y = (p j))")
-              case True
-              then have "j \<in> set ?l" 
-                using \<open>last ys \<in> set ?l\<close> 
-                by presburger
-              obtain n where "j = ?l!n \<and> n < length ?l" using in_set_conv_nth 
-                by (metis True \<open>last ys \<in> set ?l\<close>)
-
-              have "j = (p^^n) i" 
-                using \<open>j = support p i ! n \<and> n < length (support p i)\<close> by force
-              then have "p j = p((p^^n) i)" 
-                by blast
-              then have "p j = (p^^(n+1)) i" 
-                by simp
-              show False
-              proof(cases "n = (least_power p i) -1")
-                case True  
-                then have "(p^^(n+1)) i = i" 
-                  by (simp add: assms(1) least_power_of_permutation(1)
-                      least_power_of_permutation(2) p_is_permutation)
-                then have "(p j) = i" 
-                  using \<open>p j = (p ^^ (n + 1)) i\<close> by presburger
-                then show ?thesis 
-                  using \<open>i \<in> set (support p i)\<close> \<open>j \<in> set (support p i)\<close>
-                        \<open>last ys = j \<and> y = p j \<or> last ys = p j \<and> y = j\<close> split_xs by presburger
-              next
-                case False
-                then have "n+1 < (least_power p i)" 
-                  by (metis Suc_eq_plus1 Suc_lessI \<open>j = support p i ! n \<and> n < length (support p i)\<close> 
-                      diff_Suc_1 length_map length_upt minus_nat.diff_0) 
-                have "p j = (support p i)!(n+1)" 
-                  using \<open>n + 1 < least_power p i\<close> \<open>p j = (p ^^ (n + 1)) i\<close> by auto
-                then have "(p j) = ?l!(n+1)" 
-                  using \<open>n + 1 < least_power p i\<close> by auto
-                then have "y \<in> set ?l" 
-                  by (metis True \<open>n + 1 < least_power p i\<close> diff_zero length_map length_upt nth_mem)
-                then show ?thesis 
-                  using split_xs by force
-              qed
-            next
-              case False
-              then have "(last ys = (p j) \<and> y = j)" 
-                using \<open>last ys = j \<and> y = p j \<or> last ys = p j \<and> y = j\<close> by auto
-              then have "(p j) \<in> set ?l" 
-                using \<open>last ys \<in> set ?l\<close> 
-                by presburger
-              obtain n where "(p j) = ?l!n \<and> n < length ?l" using in_set_conv_nth 
-                by (metis \<open>(p j) \<in> set ?l\<close>)
-
-              have "p j = (p^^n) i" 
-                using \<open>p j = support p i ! n \<and> n < length (support p i)\<close> by force
-              have "p permutes (UNIV :: 'a set)"
-                using assms(1) nonzero_perms_def by auto
-
-              then have "inj p" 
-                using permutes_inj by blast
-              show False
-              proof(cases "n = 0")
-                case True
-                have "p j = i" 
-                  by (simp add: True \<open>p j = (p ^^ n) i\<close>)
-
-                have "p j = (p^^(least_power p i)) i" 
-                  by (simp add: \<open>p j = i\<close> assms(1) least_power_of_permutation(1) p_is_permutation)
-                have "(least_power p i) > 0" 
-                  by (simp add: \<open>p permutes UNIV\<close> least_power_of_permutation(2) p_is_permutation)
-                then have "(p^^(least_power p i)) i = ((p^^(((least_power p i)-1)+1)) i)"
-                  by fastforce
-                then have "(p^^(((least_power p i)-1)+1)) = p \<circ> (p^^(((least_power p i)-1)))"
-                  by simp
-                then have "((p^^(((least_power p i)-1)+1)) i) = p (((p^^((least_power p i)-1)) i))"
-                  by simp
-                then have "(p^^(least_power p i)) i = p (((p^^((least_power p i)-1)) i))" 
-                  using \<open>(p ^^ least_power p i) i = (p ^^ (least_power p i - 1 + 1)) i\<close> 
-                  by presburger
-                then have "p j = p (((p^^((least_power p i)-1)) i))" 
-                  using \<open>p j = (p ^^ least_power p i) i\<close> by presburger
-                then have "j = ((p^^((least_power p i)-1)) i)" using `inj p` 
-                  by (meson inj_eq)
-                then have "j = ?l!((least_power p i)-1)" 
-                  by (simp add: \<open>0 < least_power p i\<close>)
-                then have "y \<in> set ?l " 
-                  by (simp add: \<open>0 < least_power p i\<close> \<open>last ys = (p j) \<and> y = j\<close>)
-                then show False 
-                  using split_xs by blast
-              next
-                case False
-                have "n > 0" 
-                  using False by blast
-                then have "n-1 \<ge> 0" 
-                  by simp
-                then have "(p^^n) i = (p \<circ> (p^^(n-1))) i" 
-                  by (metis One_nat_def Suc_pred \<open>0 < n\<close> funpow.simps(2))
-                then have "(p^^n) i = p ((p^^(n-1)) i)" 
-                  by simp
-                then have "p j = p ((p^^(n-1)) i)" 
-                  using \<open>p j = (p ^^ n) i\<close> by presburger
-                then have "j = (p^^(n-1)) i" using `inj p` 
-                  by (meson inj_eq)
-                then have "j = ?l!(n-1)" 
-                  using \<open>p j = support p i ! n \<and> n < length (support p i)\<close> by force
-                then have "y \<in> set ?l" 
-                  by (metis \<open>last ys = p j \<and> y = j\<close> \<open>p j = support p i!n \<and> n < length (support p i)\<close> 
-                      in_set_conv_nth less_imp_diff_less)
-                then show False 
-                  using split_xs by blast
-              qed
-            qed
-          qed
-        qed
-      qed
+      have " v' = p v" 
+        using False \<open>v = p v' \<or> v' = p v\<close> by auto
+      then have "(p^^(1::nat)) v = v'" 
+        by (simp add: \<open>(p ^^ n) i = v'\<close>)
+      then have "v \<in> set (support p i)"  
+        using elemnets_in_support_expo'[of p v' i "(1::nat)" v] 
+        using \<open>v' \<in> set (support p i)\<close> assms(1) p_is_permutation by blast
+      then obtain j where "v = support p i!j \<and> j < least_power p i" 
+        by (smt (verit, best) add.left_neutral atLeastLessThan_iff diff_zero imageE 
+            length_upt nth_map nth_upt set_map set_upt)
+      then have "(p^^j) i = v" 
+        by simp
+      then show ?thesis 
+        using path2.hyps(3) path2.prems by auto
     qed
-  qed 
+  qed
+  then obtain n where "(p^^n) i = x" 
+    using \<open>x \<in> set xs\<close> by blast
+  then show "x \<in> set (support p i)" 
+    by (metis \<open>i \<in> set (support p i)\<close> assms(1) elemnets_in_support_expo p_is_permutation)
 qed
+
 
 lemma perm_support_distinct:
   assumes "p permutes (UNIV :: 'a set)"
@@ -842,14 +786,250 @@ lemma perm_verts_in_all_verts:
   using univ by auto
 
 lemma perm_verts_eq_all:
- assumes "p \<in> nonzero_perms"
- shows "Vs (u_edges p) = Vs E" 
+  assumes "p \<in> nonzero_perms"
+  shows "Vs (u_edges p) = Vs E" 
 proof - 
   have "Vs (u_edges p) = UNIV" 
     by (smt (verit, ccfv_SIG) insertCI mem_Collect_eq subsetI subset_antisym
         top_greatest tutte_matrix.u_edges_def tutte_matrix_axioms vs_member) 
   then show " Vs (u_edges p) = Vs E" 
     by (simp add: univ)
+qed
+
+lemma even_circuit_matching:
+  assumes "p \<in> nonzero_perms"
+  assumes "C \<in> connected_components (u_edges p)"
+  assumes "even (card C)"
+  shows "\<exists> M. perfect_matching (component_edges (u_edges p) C) M"
+proof -
+  have "p permutes (UNIV :: 'a set)" using assms(1) 
+    by (simp add: nonzero_perms_elim(1))
+  have "even (card C)" using assms(3) by auto
+  have "C \<subseteq> Vs (u_edges p)" 
+    by (simp add: \<open>C \<in> connected_components (u_edges p)\<close> connected_component_subs_Vs)
+
+  obtain x where "x \<in> C" 
+    by (metis \<open>C \<in> connected_components (u_edges p)\<close> connected_comp_nempty ex_in_conv)
+  then have "x \<in> Vs (u_edges p)" 
+    by (meson \<open>C \<in> connected_components (u_edges p)\<close> connected_comp_verts_in_verts)
+
+
+  have "set (support p x) = C" 
+    using \<open>C \<in> connected_components (u_edges p)\<close>  \<open>x \<in> C\<close> `p permutes (UNIV :: 'a set)` support_is_connected_component by fastforce
+  let ?l = "(support p x)"
+  let ?even_i = "{j. j \<in> {0..<length (support p x)} \<and> even j}"
+  let ?start_vert = "nths (support p x) ?even_i"
+  let ?m_edges = "{{j, (p j)}| j. j \<in> set ?start_vert}"
+
+  have "even (card (set (support p x)))" 
+    using \<open>set (support p x) = C\<close> assms(3) by blast
+  then have "even (length (support p x))" 
+    by (metis \<open>p permutes UNIV\<close> distinct_card perm_support_distinct)
+
+
+  have " set ?start_vert \<subseteq> (UNIV :: 'a set)" 
+    by blast
+  then have "?m_edges \<subseteq> u_edges p" 
+    using tutte_matrix.u_edges_def tutte_matrix_axioms by fastforce
+
+  have "Vs ?m_edges = set  (support p x)" 
+  proof(safe)
+    {  fix y
+      assume "y \<in> Vs ?m_edges"
+      then obtain a where "y \<in> {a, (p a)} \<and> a \<in> set ?start_vert" 
+        by (smt (z3) mem_Collect_eq vs_member_elim)
+      then show "y \<in> set (support p x)" 
+        by (metis (no_types, lifting)  \<open>p permutes UNIV\<close> \<open>set (support p x) = C\<close> empty_iff insertE notin_set_nthsI p_in_same_cycle)
+
+    }
+    fix y
+    assume "y \<in> set (support p x)" 
+    then obtain n where n_exp: "y = (support p x)!n \<and> n < least_power p x" 
+      by (metis diff_zero in_set_conv_nth length_map length_upt)
+    show "y \<in> Vs ?m_edges" 
+    proof(cases "even n")
+      case True
+      then have "n \<in>  {j \<in> {0..<length (support p x)}. even j}" 
+        by (simp add: n_exp)
+      then have "y \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})" 
+        by (metis (mono_tags, lifting) n_exp diff_zero length_map length_upt nths_in_result)
+      then have "{y, p y} \<in> ?m_edges" 
+        by blast
+      then show ?thesis by blast 
+    next
+      case False
+      have "n > 0" using False  
+        using odd_pos by auto
+      then have "even (n-1)" 
+        by (simp add: False)
+      then have "n - 1 \<in>  {j \<in> {0..<length (support p x)}. even j}" 
+        by (simp add: n_exp less_imp_diff_less)
+      then have "(support p x)!(n-1)\<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})"      
+        by (metis (no_types, lifting) n_exp  diff_zero length_map length_upt less_imp_diff_less nths_in_result)
+      have "support p x ! n = p ((support p x)!(n-1))"  
+        using \<open>0 < n\<close> n_exp \<open>p permutes UNIV\<close> length_upt map_eq_conv next_elem_by_p by force
+      have "{((support p x)!(n-1)), (p ((support p x)!(n-1)))} \<in> ?m_edges"  
+        using \<open>support p x ! (n - 1) \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> by blast
+
+      then have "(p ((support p x)!(n-1))) = y" 
+        using \<open>support p x ! n = p (support p x ! (n - 1))\<close> n_exp by presburger
+
+      then show ?thesis 
+        using \<open>{support p x ! (n - 1), p (support p x ! (n - 1))} \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> insert_commute by auto
+
+    qed
+  qed
+  then have "Vs ?m_edges = C" 
+    using \<open>set (support p x) = C\<close> by fastforce
+  have "matching ?m_edges" unfolding matching_def
+  proof
+    fix e1 
+    assume "e1 \<in> ?m_edges"
+
+    show "\<forall>e2 \<in> ?m_edges. e1 \<noteq> e2 \<longrightarrow>e1 \<inter> e2 = {}"
+    proof
+      fix e2
+      assume "e2 \<in> ?m_edges"
+      show "e1 \<noteq> e2 \<longrightarrow>e1 \<inter> e2 = {}"
+      proof
+        assume "e1 \<noteq> e2"
+        show "e1 \<inter> e2 = {}"
+        proof(rule ccontr)
+          assume " e1 \<inter> e2 \<noteq> {}" 
+          then obtain t where "t \<in> e1 \<inter> e2" by auto
+          obtain u v where "e1 = {u, t} \<and> e2 = {t, v}" 
+            by (smt (z3) IntD1 IntD2 \<open>e1 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>e2 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>t \<in> e1 \<inter> e2\<close> empty_iff insert_commute insert_iff mem_Collect_eq)
+          then have "u \<noteq> v" 
+            using \<open>e1 \<noteq> e2\<close> by fastforce
+          then obtain a where a_elem:"{a, (p a)} = {u, t}  \<and> a \<in> set ?start_vert" 
+            using \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e1 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> by force
+          obtain b where b_elem:"{b, (p b)} = {v, t}  \<and> b \<in> set ?start_vert" 
+            by (smt (z3) \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e2 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> insert_commute mem_Collect_eq)
+          have "even (length (support p x))" 
+            using \<open>even (length (support p x))\<close> by blast
+
+          have "a \<in> set (support p x)"  
+            using a_elem notin_set_nthsI by fastforce
+
+          then obtain an where "a = (support p x)!an  \<and>  an \<in> {j \<in> {0..<length (support p x)}. even j}" 
+            using a_elem nths_obtain_index[of a "(support p x)" "{j \<in> {0..<length (support p x)}. even j}"]
+            by (metis (no_types, lifting))
+          then have "even an"  by blast
+          then have "an < (length (support p x)) - 1" using `even (length (support p x))` 
+            using a_elem  
+            using One_nat_def Suc_leI Suc_pred \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>a \<in> set (support p x)\<close> atLeastLessThan_iff even_Suc length_pos_if_in_set linorder_neqE_nat mem_Collect_eq not_le by fastforce
+          have "b \<in> set (support p x)"  
+            using b_elem notin_set_nthsI by fastforce
+          then obtain bn where "b = (support p x)!bn  \<and>  bn \<in> {j \<in> {0..<length (support p x)}. even j}"
+            using b_elem  nths_obtain_index 
+            by (metis (no_types, lifting))
+          then have "bn < (length (support p x)) - 1" using `even (length (support p x))` 
+            by fastforce
+          have "even bn" 
+            using \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
+
+          show False
+          proof(cases "a = u \<and> (p a) = t")
+            case True
+
+            then show ?thesis
+            proof(cases "b = v \<and> (p b) = t")
+              case True
+              have "p a = p b" using `a = u \<and> (p a) = t` True 
+                by auto
+              then have "a = b" 
+                by (smt (verit, ccfv_SIG) \<open>p permutes UNIV\<close> \<open>set (nths (support p x) {j \<in> {0..<length (support p x)}. even j}) \<subseteq> UNIV\<close> \<open>{a, (p a)} = {u, t} \<and> a \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> \<open>{b,  (p b)} = {v, t} \<and> b \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> bij_betw_iff_bijections permutes_imp_bij subsetD)
+              then show ?thesis 
+                using True \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e1 \<noteq> e2\<close> a_elem by blast
+            next
+              case False
+              have "b = t \<and> (p b) = v" 
+                by (meson False \<open>{b, (p b)} = {v, t} \<and> b \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> doubleton_eq_iff)
+
+              have "p ((support p x)!an) = (support p x)!(an+1)" 
+                using  next_elem_by_p'[of p an x] 
+                using \<open>an < length (support p x) - 1\<close> \<open>p permutes UNIV\<close> by presburger
+              then have "p a = (support p x)!(an+1)" 
+                using \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
+              then have "(support p x)!(an+1) = (support p x)!(bn)" 
+                using True \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>b = t \<and> p b = v\<close> by presburger
+              have "an +1 \<noteq> bn" 
+                using \<open>even an\<close> \<open>even bn\<close> even_add odd_one by blast
+              then have "\<not> distinct (support p x)" 
+                by (metis (no_types, lifting) \<open>an < length (support p x) - 1\<close> \<open>bn < length (support p x) - 1\<close> \<open>support p x ! (an + 1) = support p x ! bn\<close> add_diff_cancel_right' less_diff_conv less_imp_diff_less nth_eq_iff_index_eq)
+
+              then show ?thesis 
+                using \<open>p permutes UNIV\<close> perm_support_distinct by force
+            qed
+          next
+            case False
+            have "a =  t \<and> (p a) = u" 
+              by (meson False a_elem doubleton_eq_iff) 
+            have "p ((support p x)!bn) = (support p x)!(bn+1)" 
+              using  next_elem_by_p'[of p bn x] 
+              using \<open>bn < length (support p x) - 1\<close> \<open>p permutes UNIV\<close> by presburger
+            then have "p b = (support p x)!(bn+1)" 
+              using \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
+
+            show ?thesis 
+            proof(cases "b = v \<and> (p b) = t")
+              case True
+              have "a = (p b)" 
+                using True \<open>a = t \<and> p a = u\<close> by blast
+              then have "(support p x)!(bn+1) = (support p x)!(an)" 
+                using \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>p b = support p x ! (bn + 1)\<close> by presburger
+              have "bn +1 \<noteq> an" 
+                using \<open>even an\<close> \<open>even bn\<close> even_add odd_one by blast
+              then have "\<not> distinct (support p x)" 
+                by (metis \<open>an < length (support p x) - 1\<close> \<open>bn < length (support p x) - 1\<close> \<open>support p x ! (bn + 1) = support p x ! an\<close> add_lessD1 less_diff_conv nth_eq_iff_index_eq)
+
+              then show ?thesis 
+                using \<open>p permutes UNIV\<close> perm_support_distinct by force
+
+            next
+              case False
+              have "b = t \<and> (p b) = v" 
+                by (meson False b_elem doubleton_eq_iff) 
+              then have "b = a" 
+                using \<open>a = t \<and> (p a) = u\<close> by auto
+              then have "u = v" 
+                using \<open>a = t \<and> (p a) = u\<close> \<open>b = t \<and> (p b) = v\<close> by blast
+              then show ?thesis 
+                using \<open>u \<noteq> v\<close> by auto
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+  have "?m_edges \<subseteq> (component_edges (u_edges p) C)"
+  proof
+    fix e
+    assume "e \<in> ?m_edges" 
+    then have "e \<in> (u_edges p)"         
+      using  \<open>?m_edges \<subseteq> u_edges p\<close> by blast
+    have "e \<subseteq> C" 
+      using \<open>Vs ?m_edges = set (support p x)\<close> \<open>e \<in> ?m_edges\<close> \<open>set (support p x) = C\<close>
+        subset_iff vs_member by blast
+    then show "e \<in> (component_edges (u_edges p) C)" unfolding component_edges_def
+      using \<open>e \<in> u_edges p\<close> by fastforce
+
+  qed
+  have "Vs (component_edges (u_edges p) C) = C" 
+    using vs_connected_component[of "u_edges p" C]
+      `C \<in> connected_components (u_edges p)` 
+    by (meson assms(1) tutte_matrix.u_edges_is_graph tutte_matrix_axioms)
+
+  have "graph_invar (component_edges (u_edges p) C)" 
+    by (metis (no_types, lifting) Berge.component_edges_subset \<open>C \<subseteq> Vs (u_edges p)\<close> \<open>Vs (component_edges (u_edges p) C) = C\<close> assms(1) finite_subset insert_subset mk_disjoint_insert tutte_matrix.u_edges_is_graph tutte_matrix_axioms)
+  then  have " perfect_matching (component_edges (u_edges p) C) ?m_edges"
+    unfolding perfect_matching_def 
+    using \<open>Vs (component_edges (u_edges p) C) = C\<close> \<open>Vs {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})} = C\<close> \<open>matching {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>{{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})} \<subseteq> component_edges (u_edges p) C\<close> 
+    by blast
+
+  then show "\<exists> M'. perfect_matching (component_edges (u_edges p) C) M'" 
+    by blast
+
 qed
 
 lemma even_circuits_has_perfect_matching:
@@ -863,236 +1043,8 @@ proof -
     by (simp add: u_edges_finite)
   have "\<forall> C \<in> connected_components (u_edges p). 
         \<exists> M'. perfect_matching (component_edges (u_edges p) C) M'"
-  proof
-    fix C
-    assume "C \<in> connected_components (u_edges p)"
-    then have "even (card C)" using assms(2) by auto
-    have "C \<subseteq> Vs (u_edges p)" 
-      by (simp add: \<open>C \<in> connected_components (u_edges p)\<close> connected_component_subs_Vs)
-
-    obtain x where "x \<in> C" 
-      by (metis \<open>C \<in> connected_components (u_edges p)\<close> connected_comp_nempty ex_in_conv)
-    then have "x \<in> Vs (u_edges p)" 
-      by (meson \<open>C \<in> connected_components (u_edges p)\<close> connected_comp_verts_in_verts)
-
-
-    have "set (support p x) = C" 
-      using \<open>C \<in> connected_components (u_edges p)\<close>  \<open>x \<in> C\<close> `p permutes (UNIV :: 'a set)` support_is_connected_component by fastforce
-    let ?l = "(support p x)"
-    let ?even_i = "{j. j \<in> {0..<length (support p x)} \<and> even j}"
-
-    have "even (length (support p x))" 
-      by (metis \<open>C \<in> connected_components (u_edges p)\<close> \<open>even (card C)\<close> \<open>p permutes UNIV\<close> \<open>x \<in> C\<close> distinct_card length_map perm_support_distinct support_is_connected_component)
-
-    let ?start_vert = "nths (support p x) ?even_i"
-    let ?m_edges = "{{j, (p j)}| j. j \<in> set ?start_vert}"
-
-
-    have " set ?start_vert \<subseteq> (UNIV :: 'a set)" 
-      by blast
-    then have "?m_edges \<subseteq> u_edges p" 
-      using tutte_matrix.u_edges_def tutte_matrix_axioms by fastforce
-
-    have "Vs ?m_edges = set  (support p x)" 
-    proof(safe)
-      {  fix y
-        assume "y \<in> Vs ?m_edges"
-        then obtain a where "y \<in> {a, (p a)} \<and> a \<in> set ?start_vert" 
-          by (smt (z3) mem_Collect_eq vs_member_elim)
-        then show "y \<in> set (support p x)" 
-          by (metis (no_types, lifting)  \<open>p permutes UNIV\<close> \<open>set (support p x) = C\<close> empty_iff insertE notin_set_nthsI p_in_same_cycle)
-
-      }
-      fix y
-      assume "y \<in> set (support p x)" 
-      then obtain n where n_exp: "y = (support p x)!n \<and> n < least_power p x" 
-        by (metis diff_zero in_set_conv_nth length_map length_upt)
-      show "y \<in> Vs ?m_edges" 
-      proof(cases "even n")
-        case True
-        then have "n \<in>  {j \<in> {0..<length (support p x)}. even j}" 
-          by (simp add: n_exp)
-        then have "y \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})" 
-          by (metis (mono_tags, lifting) n_exp diff_zero length_map length_upt nths_in_result)
-        then have "{y, p y} \<in> ?m_edges" 
-          by blast
-        then show ?thesis by blast 
-      next
-        case False
-        have "n > 0" using False  
-          using odd_pos by auto
-        then have "even (n-1)" 
-          by (simp add: False)
-        then have "n - 1 \<in>  {j \<in> {0..<length (support p x)}. even j}" 
-          by (simp add: n_exp less_imp_diff_less)
-        then have "(support p x)!(n-1)\<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})"      
-          by (metis (no_types, lifting) n_exp  diff_zero length_map length_upt less_imp_diff_less nths_in_result)
-        have "support p x ! n = p ((support p x)!(n-1))"  
-          using \<open>0 < n\<close> n_exp \<open>p permutes UNIV\<close> length_upt map_eq_conv next_elem_by_p by force
-        have "{((support p x)!(n-1)), (p ((support p x)!(n-1)))} \<in> ?m_edges"  
-          using \<open>support p x ! (n - 1) \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> by blast
-
-        then have "(p ((support p x)!(n-1))) = y" 
-          using \<open>support p x ! n = p (support p x ! (n - 1))\<close> n_exp by presburger
-
-        then show ?thesis 
-          using \<open>{support p x ! (n - 1), p (support p x ! (n - 1))} \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> insert_commute by auto
-
-      qed
-    qed
-    then have "Vs ?m_edges = C" 
-      using \<open>set (support p x) = C\<close> by fastforce
-    have "matching ?m_edges" unfolding matching_def
-    proof
-      fix e1 
-      assume "e1 \<in> ?m_edges"
-
-      show "\<forall>e2 \<in> ?m_edges. e1 \<noteq> e2 \<longrightarrow>e1 \<inter> e2 = {}"
-      proof
-        fix e2
-        assume "e2 \<in> ?m_edges"
-        show "e1 \<noteq> e2 \<longrightarrow>e1 \<inter> e2 = {}"
-        proof
-          assume "e1 \<noteq> e2"
-          show "e1 \<inter> e2 = {}"
-          proof(rule ccontr)
-            assume " e1 \<inter> e2 \<noteq> {}" 
-            then obtain t where "t \<in> e1 \<inter> e2" by auto
-            obtain u v where "e1 = {u, t} \<and> e2 = {t, v}" 
-              by (smt (z3) IntD1 IntD2 \<open>e1 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>e2 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>t \<in> e1 \<inter> e2\<close> empty_iff insert_commute insert_iff mem_Collect_eq)
-            then have "u \<noteq> v" 
-              using \<open>e1 \<noteq> e2\<close> by fastforce
-            then obtain a where a_elem:"{a, (p a)} = {u, t}  \<and> a \<in> set ?start_vert" 
-              using \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e1 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> by force
-            obtain b where b_elem:"{b, (p b)} = {v, t}  \<and> b \<in> set ?start_vert" 
-              by (smt (z3) \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e2 \<in> {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> insert_commute mem_Collect_eq)
-            have "even (length (support p x))" 
-              using \<open>even (length (support p x))\<close> by blast
-
-            have "a \<in> set (support p x)"  
-              using a_elem notin_set_nthsI by fastforce
-
-            then obtain an where "a = (support p x)!an  \<and>  an \<in> {j \<in> {0..<length (support p x)}. even j}" 
-              using a_elem nths_obtain_index[of a "(support p x)" "{j \<in> {0..<length (support p x)}. even j}"]
-              by (metis (no_types, lifting))
-            then have "even an"  by blast
-            then have "an < (length (support p x)) - 1" using `even (length (support p x))` 
-              using a_elem  
-              using One_nat_def Suc_leI Suc_pred \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>a \<in> set (support p x)\<close> atLeastLessThan_iff even_Suc length_pos_if_in_set linorder_neqE_nat mem_Collect_eq not_le by fastforce
-            have "b \<in> set (support p x)"  
-              using b_elem notin_set_nthsI by fastforce
-            then obtain bn where "b = (support p x)!bn  \<and>  bn \<in> {j \<in> {0..<length (support p x)}. even j}"
-              using b_elem  nths_obtain_index 
-              by (metis (no_types, lifting))
-            then have "bn < (length (support p x)) - 1" using `even (length (support p x))` 
-              by fastforce
-            have "even bn" 
-              using \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
-
-            show False
-            proof(cases "a = u \<and> (p a) = t")
-              case True
-
-              then show ?thesis
-              proof(cases "b = v \<and> (p b) = t")
-                case True
-                have "p a = p b" using `a = u \<and> (p a) = t` True 
-                  by auto
-                then have "a = b" 
-                  by (smt (verit, ccfv_SIG) \<open>p permutes UNIV\<close> \<open>set (nths (support p x) {j \<in> {0..<length (support p x)}. even j}) \<subseteq> UNIV\<close> \<open>{a, (p a)} = {u, t} \<and> a \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> \<open>{b,  (p b)} = {v, t} \<and> b \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> bij_betw_iff_bijections permutes_imp_bij subsetD)
-                then show ?thesis 
-                  using True \<open>e1 = {u, t} \<and> e2 = {t, v}\<close> \<open>e1 \<noteq> e2\<close> a_elem by blast
-              next
-                case False
-                have "b = t \<and> (p b) = v" 
-                  by (meson False \<open>{b, (p b)} = {v, t} \<and> b \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})\<close> doubleton_eq_iff)
-
-                have "p ((support p x)!an) = (support p x)!(an+1)" 
-                  using  next_elem_by_p'[of p an x] 
-                  using \<open>an < length (support p x) - 1\<close> \<open>p permutes UNIV\<close> by presburger
-                then have "p a = (support p x)!(an+1)" 
-                  using \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
-                then have "(support p x)!(an+1) = (support p x)!(bn)" 
-                  using True \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>b = t \<and> p b = v\<close> by presburger
-                have "an +1 \<noteq> bn" 
-                  using \<open>even an\<close> \<open>even bn\<close> even_add odd_one by blast
-                then have "\<not> distinct (support p x)" 
-                  by (metis (no_types, lifting) \<open>an < length (support p x) - 1\<close> \<open>bn < length (support p x) - 1\<close> \<open>support p x ! (an + 1) = support p x ! bn\<close> add_diff_cancel_right' less_diff_conv less_imp_diff_less nth_eq_iff_index_eq)
-
-                then show ?thesis 
-                  using \<open>p permutes UNIV\<close> perm_support_distinct by force
-              qed
-            next
-              case False
-              have "a =  t \<and> (p a) = u" 
-                by (meson False a_elem doubleton_eq_iff) 
-              have "p ((support p x)!bn) = (support p x)!(bn+1)" 
-                using  next_elem_by_p'[of p bn x] 
-                using \<open>bn < length (support p x) - 1\<close> \<open>p permutes UNIV\<close> by presburger
-              then have "p b = (support p x)!(bn+1)" 
-                using \<open>b = support p x ! bn \<and> bn \<in> {j \<in> {0..<length (support p x)}. even j}\<close> by fastforce
-
-              show ?thesis 
-              proof(cases "b = v \<and> (p b) = t")
-                case True
-                have "a = (p b)" 
-                  using True \<open>a = t \<and> p a = u\<close> by blast
-                then have "(support p x)!(bn+1) = (support p x)!(an)" 
-                  using \<open>a = support p x ! an \<and> an \<in> {j \<in> {0..<length (support p x)}. even j}\<close> \<open>p b = support p x ! (bn + 1)\<close> by presburger
-                have "bn +1 \<noteq> an" 
-                  using \<open>even an\<close> \<open>even bn\<close> even_add odd_one by blast
-                then have "\<not> distinct (support p x)" 
-                  by (metis \<open>an < length (support p x) - 1\<close> \<open>bn < length (support p x) - 1\<close> \<open>support p x ! (bn + 1) = support p x ! an\<close> add_lessD1 less_diff_conv nth_eq_iff_index_eq)
-
-                then show ?thesis 
-                  using \<open>p permutes UNIV\<close> perm_support_distinct by force
-
-              next
-                case False
-                have "b = t \<and> (p b) = v" 
-                  by (meson False b_elem doubleton_eq_iff) 
-                then have "b = a" 
-                  using \<open>a = t \<and> (p a) = u\<close> by auto
-                then have "u = v" 
-                  using \<open>a = t \<and> (p a) = u\<close> \<open>b = t \<and> (p b) = v\<close> by blast
-                then show ?thesis 
-                  using \<open>u \<noteq> v\<close> by auto
-              qed
-            qed
-          qed
-        qed
-      qed
-    qed
-    have "?m_edges \<subseteq> (component_edges (u_edges p) C)"
-    proof
-      fix e
-      assume "e \<in> ?m_edges" 
-      then have "e \<in> (u_edges p)"         
-        using  \<open>?m_edges \<subseteq> u_edges p\<close> by blast
-      have "e \<subseteq> C" 
-        using \<open>Vs ?m_edges = set (support p x)\<close> \<open>e \<in> ?m_edges\<close> \<open>set (support p x) = C\<close>
-          subset_iff vs_member by blast
-      then show "e \<in> (component_edges (u_edges p) C)" unfolding component_edges_def
-        using \<open>e \<in> u_edges p\<close> by fastforce
-      
-    qed
-    have "Vs (component_edges (u_edges p) C) = C" 
-      using vs_connected_component[of "u_edges p" C]
-        `C \<in> connected_components (u_edges p)` 
-      by (meson assms(1) tutte_matrix.u_edges_is_graph tutte_matrix_axioms)
-
-    have "graph_invar (component_edges (u_edges p) C)" 
-      by (metis (no_types, lifting) Berge.component_edges_subset \<open>C \<subseteq> Vs (u_edges p)\<close> \<open>Vs (component_edges (u_edges p) C) = C\<close> assms(1) finite_subset insert_subset mk_disjoint_insert tutte_matrix.u_edges_is_graph tutte_matrix_axioms)
-    then  have " perfect_matching (component_edges (u_edges p) C) ?m_edges"
-      unfolding perfect_matching_def 
-      using \<open>Vs (component_edges (u_edges p) C) = C\<close> \<open>Vs {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})} = C\<close> \<open>matching {{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})}\<close> \<open>{{j, p j} |j. j \<in> set (nths (support p x) {j \<in> {0..<length (support p x)}. even j})} \<subseteq> component_edges (u_edges p) C\<close> 
-      by blast
-
-    then show "\<exists> M'. perfect_matching (component_edges (u_edges p) C) M'" 
-      by blast
-
-  qed
-
+    using even_circuit_matching 
+    using assms(1) assms(2) by blast
   then  show "\<exists> M. perfect_matching (u_edges p) M" using 
       perfect_matching_union_components[of "u_edges p"] u_edges_is_graph assms(1)
     by blast
@@ -1120,7 +1072,9 @@ proof -
   then have "(p^^least_power p i) ((p^^n) i) = (p^^n) i" 
     by simp
   show ?thesis 
-    using \<open>(p ^^ least_power p i) ((p ^^ n) i) = (p ^^ n) i\<close> \<open>(p ^^ n) i = a \<and> n < least_power p i\<close> by auto
+    using \<open>(p ^^ least_power p i) ((p ^^ n) i) = (p ^^ n) i\<close> 
+      \<open>(p ^^ n) i = a \<and> n < least_power p i\<close> 
+    by auto
 qed
 
 lemma inv_in_support:
@@ -1128,161 +1082,15 @@ lemma inv_in_support:
   assumes "a \<in> set (support p i)"
   shows "(inv p) a \<in> set (support p i)" 
 proof  -
-  have "least_power p i > 0" 
-    by (simp add: assms(1) least_power_of_permutation(2))
-  have "p ((inv p) a) = a" 
-    by (meson assms(1) bij_inv_eq_iff permutation_bijective)
-  have "(p \<circ> (p^^((least_power p i)-1))) a = a" using least_power_same_in_support
-      assms 
-    by (metis One_nat_def Suc_pred \<open>0 < least_power p i\<close> funpow.simps(2))
-  then have "p ((p^^((least_power p i)-1)) a) = a" by simp
-  then have "p ((inv p) a) = p ((p^^((least_power p i)-1)) a)" 
-    using \<open>p (inv p a) = a\<close> by presburger
-  then have "(inv p) a = (p^^((least_power p i)-1)) a" 
-    by (metis assms(1) bij_inv_eq_iff permutation_bijective)
+  have "permutation (inv p)" 
+    using assms(1) permutation_inverse by blast
+  have "a \<in> set (support (inv p) i)" 
+    using assms(1) assms(2) inv_support_same by fastforce
+  have "(inv p) a \<in> set (support (inv p) i)" 
+    by (smt (verit, ccfv_SIG) \<open>a \<in> set (support (inv p) i)\<close> \<open>permutation (inv p)\<close> cycle_is_surj 
+        cycle_of_permutation cycle_restrict image_iff map_eq_conv)
   then show ?thesis 
-    by (smt (z3) One_nat_def Suc_pred \<open>0 < least_power p i\<close> assms(1) assms(2) comp_def cycle_is_surj cycle_of_permutation cycle_restrict funpow.simps(2) funpow_swap1 image_iff least_power_same_in_support map_eq_conv)
-qed
-
-
-
-lemma mod_least_power_same:
-  assumes "permutation p" 
-  assumes "(p ^^ n) a = b"
-  shows "(p^^(n mod (least_power p a))) a = b"
-proof (cases "n = 0", simp)
-  {
-    let ?lpow = "least_power p" 
-    assume "n \<noteq> 0" then have "n > 0" by simp
-    have  "(p ^^ (?lpow a)) a = a" 
-      using assms  
-      by (meson least_power_of_permutation(1))
-    hence aux_lemma: "(p ^^ ((?lpow a) * k)) a = a" for k :: nat
-      by (induct k) (simp_all add: funpow_add)
-
-    have "(p ^^ (n mod ?lpow a)) ((p ^^ (n - (n mod ?lpow a))) a) = (p ^^ n) a"
-      by (metis add_diff_inverse_nat funpow_add mod_less_eq_dividend not_less o_apply)
-    with \<open>(p ^^ n) a = b\<close> 
-    show "(p ^^ (n mod ?lpow a)) a = b"
-      using aux_lemma by (simp add: minus_mod_eq_mult_div) 
-  }
-  show "n = 0 \<Longrightarrow> a = b" 
-    using assms(2) by auto
-qed
-
-lemma elemnets_in_support_expo:
-  fixes n :: "nat"
-  assumes "permutation p" 
-  assumes "x \<in> set (support p i)"
-  assumes "y = (p^^n) x"
-  shows "y \<in> set (support p i)" 
-proof -
-  let ?len = "least_power p i"
-  obtain k where "(p^^k) i = x \<and> k < least_power p i" using assms 
-    by fastforce
-  have "((p^^n)\<circ>(p^^k)) i = y" 
-    by (simp add: \<open>(p ^^ k) i = x \<and> k < least_power p i\<close> assms(3)) 
-  then have "(p^^(n+k)) i = y" 
-    by (simp add: funpow_add) 
-  then have "(p^^((n+k) mod ?len)) i = y" 
-    by (simp add: assms(1) mod_least_power_same)
-  have "((n+k) mod ?len) < ?len" 
-    by (meson assms(1) least_power_of_permutation(2) mod_less_divisor)
-  then have "(support p i)!((n+k) mod ?len) = y" 
-    by (simp add: \<open>(p ^^ ((n + k) mod least_power p i)) i = y\<close>)
-  then show ?thesis  
-    using \<open>(n + k) mod least_power p i < least_power p i\<close> by force
-qed
-
-lemma elemnets_in_support_expo':
-  fixes n :: "nat"
-  assumes "permutation p" 
-  assumes "x \<in> set (support p i)"
-  assumes "x = (p^^n) y"
-  shows "y \<in> set (support p i)"
-proof -
-  have "permutation (p^^n)" 
-    by (simp add: assms(1) permutation_funpow)
-  let ?len = "(least_power p i)" 
-  obtain k where "(p^^k) i = x \<and> k < least_power p i" using assms 
-    by fastforce
-  have "(p^^k) i = (p^^n) y" 
-    by (simp add: \<open>(p ^^ k) i = x \<and> k < least_power p i\<close> assms(3))
-  have "permutation (p^^k)" 
-    by (simp add: assms(1) permutation_funpow)
-  let ?dvd = "n div ?len" 
-  have "n = ?dvd * ?len + (n mod ?len)" 
-    by presburger
-  have "permutation (p^^(?dvd * ?len))" 
-    using assms(1) permutation_funpow by blast
-  have "(p^^k) i = ((p^^(?dvd * ?len))\<circ> p^^(n mod ?len)) y" 
-    by (metis \<open>(p ^^ k) i = (p ^^ n) y\<close> div_mult_mod_eq funpow_add)
-  have "i = (p^^(?dvd * ?len)) i" 
-    by (metis add.right_neutral assms(1) dvd_eq_mod_eq_0 least_power_dvd least_power_of_permutation(2) mod_less mod_mult_self3)
-  then have "(p^^k) i = ((p^^k) \<circ> (p^^(?dvd * ?len))) i" 
-    by auto
-  then have "(p^^k) i = (p^^(?dvd * ?len)) ((p^^k) i)" 
-    by (metis add.commute comp_apply funpow_add)
-  have "(p^^(?dvd * ?len)) ((p^^k) i) = (p^^(?dvd * ?len)) (( p^^(n mod ?len)) y )" 
-
-    by (metis \<open>(p ^^ k) i = (p ^^ (n div least_power p i * least_power p i) \<circ> p ^^ (n mod least_power p i)) y\<close> \<open>(p ^^ k) i = (p ^^ (n div least_power p i * least_power p i)) ((p ^^ k) i)\<close> comp_apply)
-  then have "(p ^^ k) i = ( p^^(n mod ?len)) y" 
-    using `permutation (p^^(?dvd * ?len))` permutation_permutes permutes_def  
-    by (smt (verit))
-  have "permutation (p^^(n mod ?len))" 
-    using assms(1) permutation_funpow by auto
-  show ?thesis
-  proof(cases "k \<ge> (n mod ?len)")
-    case True
-
-    have "(p^^k) i = ((p^^(n mod ?len)) \<circ> (((p^^(k-(n mod ?len)))))) i" 
-      by (metis True add_diff_inverse_nat funpow_add leD)
-    then have "(p^^(n mod ?len)) y = ((p^^(n mod ?len)) \<circ> (((p^^(k-(n mod ?len)))))) i" 
-      using \<open>(p ^^ k) i = (p ^^ (n mod least_power p i)) y\<close> by presburger
-    then have "(p^^(n mod ?len)) y = (p^^(n mod ?len)) ((p^^(k-(n mod ?len))) i)" 
-      by simp
-    then have "y = ((p^^(k-(n mod ?len))) i)" using `permutation (p^^(n mod ?len))`
-        permutation_permutes permutes_def  
-      by (smt (verit))
-    then have "y = support p i !(k-(n mod ?len))" 
-      by (simp add: \<open>(p ^^ k) i = x \<and> k < least_power p i\<close> less_imp_diff_less) 
-    then show ?thesis 
-      by (simp add: \<open>(p ^^ k) i = x \<and> k < least_power p i\<close> less_imp_diff_less)
-  next
-    case False
-    have "k + ?len \<ge> (n mod ?len)" 
-      by (meson assms(1) least_power_of_permutation(2) mod_le_divisor trans_le_add2)
-    have "(p^^(n mod ?len)) y = ((p^^k) \<circ> (((p^^((n mod ?len)-k))))) y" 
-
-      by (metis False add_diff_inverse_nat funpow_add less_imp_le)
-    then have "(p^^k) i = ((p^^k) \<circ> (((p^^((n mod ?len)-k))))) y" 
-      using \<open>(p ^^ k) i = (p ^^ (n mod ?len)) y\<close> 
-      by presburger
-    then have "(p^^k) i = (p^^k) ((p^^((n mod ?len)-k)) y)" 
-      by simp
-    then have "i = ((p^^((n mod ?len)-k)) y)" using `permutation (p^^k)`  
-      by (metis permutation_permutes permutes_def)
-
-
-    have "(p^^k) ((p^^?len) i) = (p ^^ (n mod ?len)) y" 
-      by (simp add: \<open>(p ^^ k) i = (p ^^ (n mod ?len)) y\<close> assms(1) least_power_of_permutation(1))
-    then have "(p^^(k + ?len)) i = (p ^^ (n mod ?len)) y" 
-      by (simp add: funpow_add)
-    then have "((p ^^ (n mod ?len)) \<circ> (p^^(k + ?len - (n mod ?len)))) i = (p^^(k + ?len)) i"
-
-      by (metis \<open>n mod least_power p i \<le> k + least_power p i\<close> funpow_add ordered_cancel_comm_monoid_diff_class.add_diff_inverse)
-    then have "(p ^^ (n mod ?len)) ((p^^(k + ?len - (n mod ?len))) i) = (p ^^ (n mod ?len)) y"
-
-      by (simp add: \<open>(p ^^ (k + least_power p i)) i = (p ^^ (n mod least_power p i)) y\<close>)
-    then have "(p^^(k + ?len - (n mod ?len))) i =  y" 
-      using `permutation (p^^(n mod ?len))`   
-      by (smt (verit, ccfv_threshold) permutation_permutes permutes_def)
-    then have "support p i!(k + ?len - (n mod ?len)) = y" 
-      by (metis False \<open>n mod least_power p i \<le> k + least_power p i\<close> diff_self_eq_0 diff_zero le_add_diff_inverse2 less_add_eq_less less_or_eq_imp_le not_le nth_map_upt)
-
-    then show ?thesis 
-      using False \<open>n mod least_power p i \<le> k + least_power p i\<close> by force
-  qed
+    using assms(1) inv_support_same by fastforce
 qed
 
 lemma inv_notin_support:
@@ -1295,7 +1103,8 @@ proof(rule ccontr)
   then have "p ((inv p) a) = a" 
     by (meson assms(1) bij_inv_eq_iff permutation_bijective)
   have "p ((inv p) a) \<in> set (support p i)" 
-    by (metis (no_types, lifting) \<open>inv p a \<in> set (support p i)\<close> assms(1) cycle_is_surj cycle_of_permutation cycle_restrict image_iff map_eq_conv)
+    by (metis (no_types, lifting) \<open>inv p a \<in> set (support p i)\<close> assms(1) cycle_is_surj 
+        cycle_of_permutation cycle_restrict image_iff map_eq_conv)
   then show False 
     using \<open>p (inv p a) = a\<close> assms(2) by auto
 qed
@@ -1321,6 +1130,7 @@ lemma p_rev_p_same':
 
 definition on_odd where
   "on_odd p = (\<lambda> x. if x \<in> set (support p (least_odd p)) then p x else x)" 
+
 
 definition not_on_odd where
   "not_on_odd p = (\<lambda> x. if x \<notin> set (support p (least_odd p)) then p x else x)" 
@@ -1353,43 +1163,32 @@ lemma on_odd_p_permutes:
 proof -
   let ?A = "set (support p  (least_odd p))"
   have "(\<forall>x\<in>?A. \<forall>y\<in>?A. (on_odd p) x = (on_odd p) y \<longrightarrow> x = y)"
-  proof(rule+)
-    fix x y
-    assume "x \<in> ?A" "y \<in> ?A"  "on_odd p x = on_odd p y" 
-    then have "on_odd p x = p x" 
-      using on_odd_in
-      by blast
-    then have "on_odd p y = p y" 
-      using on_odd_in 
-      using \<open>y \<in> ?A\<close> by blast
+    apply rule+
+    by (metis assms on_odd_def permutes_inv_eq)
 
-    then show "x = y" 
-      by (metis \<open>on_odd p x = on_odd p y\<close> \<open>on_odd p x = p x\<close> assms permutes_def)
-  qed
   then have "inj_on (on_odd p) ?A" 
     using inj_on_def by blast
   have "(on_odd p) ` ?A = ?A"
-  proof(safe)
-    { 
-      fix x
-      assume "x \<in> ?A"
-      then have "p x \<in> ?A" 
-        using assms p_in_same_cycle by blast
-
-      then show "on_odd p x \<in> ?A" 
-        using \<open>x \<in> ?A\<close> on_odd_def by presburger
-    }
+    apply safe 
+    using assms on_odd_def p_in_same_cycle apply presburger
+  proof -
     fix x
     assume "x \<in> ?A" 
-    show "x \<in> (on_odd p) ` ?A" 
-      by (smt (verit, ccfv_SIG) \<open>x \<in> ?A\<close> assms image_iff inv_in_support map_eq_conv p_is_permutation rev_p_def tutte_matrix.on_odd_def tutte_matrix.p_rev_p_same tutte_matrix_axioms)
+    have "(inv p) x \<in> ?A" 
+      using \<open>x \<in> ?A\<close> assms inv_in_support p_is_permutation by fastforce
+    have "(on_odd p) ((inv p) x) = x" 
+      by (metis \<open>inv p x \<in> ?A\<close> assms  on_odd_def permutes_inverses(1))
+    then show "x \<in> (on_odd p) ` ?A" 
+      by (metis \<open>inv p x \<in> ?A\<close> image_eqI)
   qed
-  then have "bij_betw (on_odd p) ?A ?A" unfolding bij_betw_def 
+  then have "bij_betw (on_odd p) ?A ?A" 
+    unfolding bij_betw_def 
     using \<open>inj_on (on_odd p) ?A\<close> by blast
   have "(\<And>x. x \<notin> ?A \<Longrightarrow> (on_odd p) x = x)" 
     using on_odd_out by presburger
-  then show " (on_odd p) permutes ?A" using  Permutations.bij_imp_permutes
-    using \<open>bij_betw (on_odd p) (set (support p (least_odd p))) (set (support p (least_odd p)))\<close> by blast
+  then show " (on_odd p) permutes ?A" 
+    using  Permutations.bij_imp_permutes
+    using \<open>bij_betw (on_odd p) ?A ?A\<close> by blast
 qed
 
 lemma on_odd_p_permutes_UNIV:
@@ -1533,43 +1332,6 @@ proof -
     by (metis least_odd_def wellorder_Least_lemma(1))
 qed
 
-lemma rev_value_minus:
-  assumes "p permutes (UNIV::'a set)"
-  shows "(tutte_matrix)$i$p i = - (tutte_matrix) $ p i$i " 
-proof(cases "(i, (p i)) \<in> oriented_edges")
-  case True
-  then have "(tutte_matrix)$i$p i = Var\<^sub>0 {i, p i}" using in_oriented 
-    by blast
-  have "((p i), i) \<notin> oriented_edges"    
-    using True get_oriented_def oriented_edges_def by auto
-  then show ?thesis 
-    by (simp add: True \<open>local.tutte_matrix $ i $ p i = Var\<^sub>0 {i, (p i)}\<close> insert_commute rev_in_oriented)
-next
-  case False
-  then have "(i, (p i)) \<notin> oriented_edges" 
-    by simp
-  then show ?thesis 
-  proof(cases "(p i,  i) \<in> oriented_edges")
-    case True
-    then have "(tutte_matrix)$i$p i = - Var\<^sub>0 {i, p i}" using rev_in_oriented 
-      by blast
-    then show ?thesis 
-      by (simp add: True \<open>local.tutte_matrix $ i $ p i = - Var\<^sub>0 {i, p i}\<close> in_oriented insert_commute)
-  next
-    case False
-    have "{i, p i} \<notin> E" using not_in_both_oriented False 
-      by (simp add: \<open>(i, p i) \<notin> oriented_edges\<close>)
-    then have "(tutte_matrix )$i$p i = 0" 
-      by (simp add: edge_not_in_E_zero_elem)
-    have "(tutte_matrix )$p i$i = 0" 
-      by (meson False \<open>(i, p i) \<notin> oriented_edges\<close> edge_not_in_E_zero_elem not_in_both_oriented)
-
-    then show ?thesis 
-      using \<open>local.tutte_matrix  $ i $ p i = 0\<close> by force
-  qed 
-qed
-
-
 lemma reverse_for_each_product:
   fixes h :: "'n \<Rightarrow> 'b::comm_ring_1"
   assumes "\<forall>a \<in> A. h a = - (g a)"
@@ -1647,17 +1409,43 @@ proof
     have "not_on_odd p x = p x" 
       using False not_on_odd_in by presburger
     have "on_odd p (p x) = p x" 
-      by (metis (full_types) \<open>not_on_odd p x = p x\<close> assms not_on_odd_def not_on_odd_p_permutes_UNIV on_odd_def permutes_univ)
+      by (metis (full_types) \<open>not_on_odd p x = p x\<close> assms not_on_odd_def not_on_odd_p_permutes_UNIV
+          on_odd_def permutes_univ)
 
     then show ?thesis 
       by (simp add: \<open>not_on_odd p x = p x\<close>)
   qed
 qed
 
+lemma rev_p_opposit_tutte_value:
+  assumes "p permutes (UNIV::'a set)"
+  assumes "i \<in> set (support p  (least_odd p))"
+  shows "(tutte_matrix )$i$p i = - (tutte_matrix )$p i$(rev_p p) (p i)"
+proof - 
+  have "p i \<in> set (support p  (least_odd p))" 
+    by (metis assms on_odd_def on_odd_p_permutes permutes_inv_eq)   
+  then have "(rev_p p) (p i) = i"  
+    unfolding rev_p_def 
+    by (metis assms(1) permutes_inv_eq)
+  then show ?thesis 
+    using  assms(1) tutte_skew_symmetric 
+    by metis
+qed
+
+lemma least_odd_support_is_odd:
+  assumes "p permutes (UNIV::'a set)"
+  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)" 
+  shows "odd (card (set (support p (least_odd p))))" 
+proof -
+  have "card (set (support p (least_odd p))) = least_power p (least_odd p)"
+    using \<open>p permutes UNIV\<close> distinct_card perm_support_distinct by force
+  then show ?thesis 
+    using assms(1) assms(2) least_odd_is_odd by presburger
+qed   
 
 lemma rev_product_is_minus:
   assumes "p permutes (UNIV::'a set)"
-  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C) "
+  assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C)"
   shows " prod (\<lambda>i. (tutte_matrix )$i$p i) (UNIV :: 'a set) = 
           -  prod (\<lambda>i. (tutte_matrix)$i$(rev_p p) i) (UNIV :: 'a set)" 
 proof -
@@ -1665,40 +1453,26 @@ proof -
   let ?h = "(\<lambda>i. (tutte_matrix )$i$p i)" 
   let ?g = "(\<lambda>i. (tutte_matrix )$i$(rev_p p) i)" 
 
-  have "prod (\<lambda>i. (tutte_matrix )$i$p i) UNIV = 
-      prod (\<lambda>i. (tutte_matrix )$i$p i) ?A *  prod (\<lambda>i. (tutte_matrix )$i$p i) (UNIV - ?A)"
-    by (metis (no_types, lifting) finite_class.finite_UNIV mult.commute prod.subset_diff top_greatest)
+  have 3: "prod ?h UNIV =  prod ?h ?A *  prod ?h (UNIV - ?A)" 
+    by (metis (no_types, lifting) mult.commute prod.subset_diff top_greatest univ_is_finite)
 
-  have "prod (\<lambda>i. (tutte_matrix )$i$(rev_p p) i) UNIV = 
-      prod (\<lambda>i. (tutte_matrix )$i$(rev_p p) i) ?A *  prod (\<lambda>i. (tutte_matrix )$i$(rev_p p) i) (UNIV - ?A)"
-    by (metis (no_types, lifting) finite_class.finite_UNIV mult.commute prod.subset_diff top_greatest)
+  have 4:"prod ?g UNIV =  prod ?g ?A *  prod ?g (UNIV - ?A)"
+    by (metis (no_types, lifting) mult.commute prod.subset_diff top_greatest univ_is_finite)
 
   have "\<forall> i\<in> (UNIV - ?A). (rev_p p) i = p i" 
     using assms p_rev_p_same' by auto
-  then have " prod ?h (UNIV  - ?A) =  prod ?g (UNIV - ?A)"    
+  then have 2:" prod ?h (UNIV  - ?A) =  prod ?g (UNIV - ?A)"    
     by force
   have "odd (card ?A)" 
-    by (smt (verit, del_insts) assms(1) assms(2) diff_zero distinct_card least_odd_is_odd length_map length_upt map_eq_conv perm_support_distinct)
+    using assms(1) assms(2) least_odd_support_is_odd by blast
   have "\<forall> i \<in> ?A. (tutte_matrix )$i$p i = - (tutte_matrix )$p i$(rev_p p) (p i)" 
-  proof
-    fix i
-    assume "i \<in> ?A"
-    show "(tutte_matrix )$i$p i = - (tutte_matrix )$p i$((rev_p p) (p i))"
-    proof - 
-      have "p (rev_p p i) = i" 
 
-        using \<open>i \<in> ?A\<close> assms(1) p_rev_p_same by presburger
-      then have "(rev_p p) (p i) = i" 
-        by (smt (verit, best) assms(1) bij_inv_eq_iff map_eq_conv p_is_permutation permutes_imp_bij rev_p_def tutte_matrix.inv_notin_support tutte_matrix_axioms)
-      show ?thesis 
-        using \<open>rev_p p (p i) = i\<close> assms(1) rev_value_minus by auto
-    qed
-  qed
+    by (simp add: assms(1) assms(2) rev_p_opposit_tutte_value)
+
   then have "\<forall> i \<in> ?A. ?h i = - (?g \<circ> (on_odd p)) i" 
     using tutte_matrix.on_odd_def tutte_matrix_axioms by fastforce
-  then have "prod ?h ?A = - prod (?g \<circ> (on_odd p)) ?A"
-    using reverse_for_each_product[of ?A ?h ] 
-     \<open>odd (card ?A)\<close> 
+  then have 1: "prod ?h ?A = - prod (?g \<circ> (on_odd p)) ?A"
+    using reverse_for_each_product[of ?A ?h ] \<open>odd (card ?A)\<close> 
     by blast
 
 
@@ -1706,9 +1480,9 @@ proof -
     using  Permutations.comm_monoid_mult_class.prod.permute [of "on_odd p" "?A" ?g] 
     using assms(1) on_odd_p_permutes by presburger
   then have "prod ?h ?A = -  prod ?g ?A " 
-    using \<open>(\<Prod>i\<in>set (support p (least_odd p)). local.tutte_matrix  $ i $ p i) = - prod ((\<lambda>i. local.tutte_matrix  $ i $ rev_p p i) \<circ> on_odd p) (set (support p (least_odd p)))\<close> by presburger
+    using 1 by presburger
   then show ?thesis
-    using \<open>(\<Prod>i\<in>UNIV - set (support p (least_odd p)). local.tutte_matrix $ i $ p i) = (\<Prod>i\<in>UNIV - set (support p (least_odd p)). local.tutte_matrix $ i $ rev_p p i)\<close> \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ p i) = (\<Prod>i\<in>set (support p (least_odd p)). local.tutte_matrix $ i $ p i) * (\<Prod>i\<in>UNIV - set (support p (least_odd p)). local.tutte_matrix $ i $ p i)\<close> \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ rev_p p i) = (\<Prod>i\<in>set (support p (least_odd p)). local.tutte_matrix $ i $ rev_p p i) * (\<Prod>i\<in>UNIV - set (support p (least_odd p)). local.tutte_matrix $ i $ rev_p p i)\<close> by auto
+    using 2 3 4 by auto
 qed
 
 
@@ -1747,11 +1521,9 @@ lemma rev_same_sign:
 lemma rev_opposite_value:
   assumes "p permutes (UNIV :: 'a set)"
   assumes "\<exists>C \<in> connected_components (u_edges p). odd (card C) " 
-  shows "(\<lambda>p. of_int (sign p) *
-     prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV) p = 
- - (\<lambda>p. of_int (sign p) *
-     prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV) (rev_p p)" (is  " ?g  p = - ?g (rev_p p)")
-
+  shows "(\<lambda>p. of_int (sign p) * prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV) p = 
+ - (\<lambda>p. of_int (sign p) *  prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV) (rev_p p)" 
+    (is  " ?g  p = - ?g (rev_p p)")
 proof -
   have "of_int (sign p) = of_int (sign (rev_p p))" 
     using assms(1) rev_same_sign by blast
@@ -1774,81 +1546,10 @@ proof -
     using assms unfolding nonzero_perms_def  
     by force
   then have " prod (\<lambda>i. (tutte_matrix)$i$(rev_p p) i) UNIV \<noteq> 0"
-    by (simp add: \<open>(\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ p i) \<noteq> 0\<close> \<open>\<exists>C\<in>connected_components (u_edges p). odd (card C)\<close> \<open>p \<in> nonzero_perms\<close> rev_product_is_minus \<open>p permutes UNIV\<close> add.inverse_neutral)
+    by (simp add: \<open>\<exists>C\<in>connected_components (u_edges p). odd (card C)\<close>  rev_product_is_minus \<open>p permutes UNIV\<close> )
   then show "rev_p p \<in> nonzero_perms" unfolding nonzero_perms_def 
     using \<open>p permutes UNIV\<close> rev_p_permutes by force
 qed
-
-lemma inv_least_power_same:
-  assumes "p permutes (UNIV:: 'a set)"
-  shows "least_power p i = least_power (inv p) i" 
-proof -
-  let ?l = "least_power p i" 
-  let ?inv_l = "least_power (inv p) i"
-  have "(p^^?l) i = i" 
-    by (simp add: assms least_power_of_permutation(1) p_is_permutation)
-  have "((inv p)^^(?inv_l)) i = i" 
-    by (simp add: assms least_power_of_permutation(1) p_is_permutation permutation_inverse)
-  then have "i = (p^^?inv_l) i" 
-    by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
-
-  show ?thesis
-  proof(rule ccontr)
-    assume "?l \<noteq> ?inv_l"
-    then have "?l < ?inv_l" 
-      by (metis \<open>i = (p ^^ least_power (inv p) i) i\<close> assms le_eq_less_or_eq least_power_le least_power_of_permutation(2) p_is_permutation permutation_inverse)
-
-    then show False 
-      by (metis \<open>(p ^^ least_power p i) i = i\<close> assms bij_betw_inv_into_left bij_fn bij_is_surj inv_fn leD least_power_le least_power_of_permutation(2) p_is_permutation permutes_imp_bij range_eqI)
-  qed
-qed
-
-
-
-
-lemma el_in_own_support:
-  assumes "p permutes (UNIV :: 'a set)"
-  shows "i \<in> set (support p i)" 
-proof -
-  have "(p^^0) i = i" by simp
-  then have "support p i!0 = i" 
-    by (simp add: assms least_power_of_permutation(2) p_is_permutation)
-  then show ?thesis 
-    by (metis assms least_power_of_permutation(2) length_map length_upt nth_mem p_is_permutation zero_less_diff)
-qed
-
-lemma inv_support_same:
-  assumes "p permutes (UNIV:: 'a set)"
-  shows "set (support p i) = set (support (inv p) i)" 
-proof(safe)
-  have "i \<in> set (support (inv p) i)" 
-    using el_in_own_support assms 
-    by (metis  permutes_inv)
-  { 
-    fix x
-    assume "x \<in> set (support p i)"
-    then obtain j where "x = (p^^j) i \<and> j < least_power p i" 
-      by fastforce
-    then have "((inv p)^^j) x= i" 
-      by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
-    then show "x \<in>  set (support (inv p) i)" 
-      by (smt (verit, ccfv_SIG) assms el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation permutes_inv)
-  }
-  fix x
-  assume "x \<in>  set (support (inv p) i)"
-  then obtain j where "x = ((inv p)^^j) i \<and> j < least_power (inv p) i" 
-    by fastforce
-  then have "(p^^j) x= i" 
-    by (metis assms bij_fn bij_inv_eq_iff inv_fn permutes_imp_bij)
-  then show "x \<in>  set (support p i)" 
-    by (smt (verit, ccfv_SIG) assms el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation permutes_inv)
-qed
-
-lemma pow_id:
-  assumes "p a = a" 
-  shows "(p^^n) a = a"
-  apply (induct n; simp)
-  by (simp add: assms)
 
 lemma pow_rev_p_is_inv:
   assumes "p permutes (UNIV:: 'a set)"
@@ -1861,8 +1562,11 @@ proof (induct n)
 next
   case (Suc n)
   let ?A = "(set (support p  (least_odd p)))"
-  have same_support: " (set (support p  (least_odd p))) =  (set (support (inv p) (least_odd p)))"
-    using assms(1) inv_support_same by blast
+  have "permutation p" using assms(1) 
+    by (simp add: p_is_permutation)
+  then  have same_support: " (set (support p  (least_odd p))) =  (set (support (inv p) (least_odd p)))"
+    using  inv_support_same 
+    by fastforce
   then have " (inv p) a \<in> (set (support (inv p)  (least_odd p)))" 
   proof -
     have "\<forall>n. p (inv p n) = n"
@@ -1902,8 +1606,6 @@ next
   then show "(p ^^ Suc n) a = (rev_p p ^^ Suc n) a" 
     by (simp add: Suc.hyps)
 qed
-
-
 
 lemma rev_p_support_same:
   assumes "p permutes (UNIV:: 'a set)"
@@ -2031,7 +1733,8 @@ proof(safe)
     proof(cases "i \<in> ?A")
       case True
       then have "p i \<in> ?A" 
-        by (smt (verit, best) assms(1) comp_apply map_eq_conv not_on_odd_def on_odd_p_permutes p_is_composition permutes_in_image)
+        by (smt (verit, best) assms(1) comp_apply map_eq_conv not_on_odd_def on_odd_p_permutes 
+            p_is_composition permutes_in_image)
 
       then have "(rev_p p) (p i) = (inv p) (p i)" 
         using rev_p_def by presburger
@@ -2141,33 +1844,14 @@ proof(rule ccontr)
     using assms(1) el_in_own_support by blast 
   assume "\<not> p x \<notin> set (support p i)" 
   then have "p x \<in> set (support p i)" by auto
-  then obtain j where "p x = (p^^j) i \<and> j < least_power p i" 
-    by auto
-  show False
-  proof(cases "j = 0")
-    case True
-    have "p x = i" 
-      by (simp add: True \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close>)
-    then have "(p^^1) x = i" 
-      by simp
-    then have "x \<in> set (support p i)" 
-      by (smt (verit, ccfv_SIG) assms(1) el_in_own_support elemnets_in_support_expo' map_eq_conv p_is_permutation)
-
-    then show ?thesis 
-      using assms(2) by blast
-  next
-    case False
-    have "p x = ((p^^((j-1)+1)) i)" 
-      using False \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> by auto 
-    then have "p x = p ((p^^((j-1))) i)" 
-      by simp
-    then have "x = (p^^((j-1))) i" 
-      by (metis assms(1) bij_imp_bij_inv bij_is_surj permutes_imp_bij surj_f_inv_f)
-    then have "support p i!(j-1) = x"
-      by (simp add: \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> less_imp_diff_less)
-    then show ?thesis 
-      using \<open>p x = (p ^^ j) i \<and> j < least_power p i\<close> assms(2) by force
-  qed
+  then have "p x \<in> set (support (inv p) i)" 
+    using assms(1) inv_support_same p_is_permutation by fastforce
+  then have "(inv p) (p x) \<in> set (support (inv p) i)" 
+    using assms(1) inv_in_support inv_support_same p_is_permutation by fastforce
+  then have "x \<in> set (support (inv p) i)" 
+    by (metis assms(1) permutes_inv_eq)
+  then show False 
+    using assms(1) assms(2) inv_support_same p_is_permutation by fastforce
 qed
 
 lemma rev_rev_same:
@@ -2255,9 +1939,9 @@ proof -
   then have "det (tutte_matrix) = 
      sum ?g {p. p permutes (UNIV :: 'a set) \<and> ?g p \<noteq> 0}"
     using \<open>(\<Sum>p | p permutes UNIV. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ p i)) = (\<Sum>p | p permutes UNIV \<and> of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ p i) \<noteq> 0. of_int (sign p) * (\<Prod>i\<in>UNIV. local.tutte_matrix  $ i $ p i))\<close> by presburger
- 
+
   let ?A = "nonzero_perms"
- have "{p. p permutes (UNIV :: 'a set) \<and> ?g p \<noteq> 0} = ?A" 
+  have "{p. p permutes (UNIV :: 'a set) \<and> ?g p \<noteq> 0} = ?A" 
 
   proof(safe)
     {
@@ -2385,7 +2069,7 @@ proof(cases "\<exists> p \<in> nonzero_perms. \<forall>C \<in> connected_compone
     by (meson \<open>p \<in> nonzero_perms  \<and> (\<forall>C\<in>connected_components (u_edges p). even (card C))\<close> perm_verts_eq_all)
   then have "perfect_matching E M" unfolding perfect_matching_def  
     by (metis \<open>perfect_matching (u_edges p) M\<close> \<open>u_edges p \<subseteq> E\<close> graph perfect_matching_member subset_trans) 
-  
+
   then show ?thesis 
     using assms by auto
 next
@@ -2401,11 +2085,14 @@ definition var_sign where
                 then 1
                 else -1)" 
 
-lemma product_is_var_product:
-  assumes "p \<in> nonzero_perms"
+
+
+lemma product_is_var_product'':
+  assumes "p permutes (UNIV::'a set)"
   assumes "finite A" 
+  assumes "\<forall>i \<in> A. {i, p i} \<in> E" (* *)
   shows "(prod (\<lambda>i. (tutte_matrix)$i$p i) (A::'a set)) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A
-    \<or> - (prod (\<lambda>i. (tutte_matrix)$i$p i) A) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A" using assms(2)
+    \<or> - (prod (\<lambda>i. (tutte_matrix)$i$p i) A) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A" using assms(2) assms(3)
 proof(induct A)
   case empty
   then show ?case 
@@ -2427,11 +2114,12 @@ next
       have "(tutte_matrix)$a$p a =  Var\<^sub>0  {a, p a}" 
         by (simp add: True in_oriented)
       then show ?thesis 
-        by (metis (mono_tags, lifting) 1 2  insert.hyps(3) mult_minus_left)
+        by (smt (z3) "1" "2" insert.hyps(3) insert.prems insert_iff mult_minus_left)
     next
       case False
-      then have "(p a, a) \<in> oriented_edges" 
-        by (smt (verit) UNIV_I assms(1) edge_not_in_E_zero_elem finite_class.finite_UNIV mem_Collect_eq prod_zero tutte_matrix.nonzero_perms_def tutte_matrix.not_in_both_oriented tutte_matrix_axioms)
+      then have "(p a, a) \<in> oriented_edges" unfolding oriented_edges_def 
+
+        by (metis (mono_tags, lifting) insert.prems insertCI not_in_both_oriented oriented_edges_def)
       then have  "(tutte_matrix)$a$p a = -  Var\<^sub>0 ({a, p a})" 
         by (simp add: rev_in_oriented)
       then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) = 
@@ -2439,12 +2127,12 @@ next
         by (simp add: True 1 2)
       then show ?thesis 
         by fastforce
-qed
+    qed
   next
     case False
     then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) F) = - prod (\<lambda> i.  Var\<^sub>0 ({i, p i})) F"
-      by (metis (no_types, lifting) add.inverse_inverse insert.hyps(3))
-   have 1:"(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) =
+      by (metis (no_types, lifting) add.inverse_inverse insert.hyps(3) insert.prems insert_iff)
+    have 1:"(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) =
         (prod (\<lambda>i. (tutte_matrix)$i$p i) F) * (tutte_matrix)$a$p a)" 
       by (simp add: insert.hyps(2))
     have 2:"prod (\<lambda> i.  Var\<^sub>0 ({i, p i}))  (insert a F) = 
@@ -2456,11 +2144,13 @@ qed
       have "(tutte_matrix)$a$p a =  Var\<^sub>0  {a, p a}" 
         by (simp add: True in_oriented)
       then show ?thesis 
-        by (metis (mono_tags, lifting) 1 2 insert.hyps(3) mult_minus_left)
+        by (smt (z3) "1" "2" insert.hyps(3) insert.prems insert_iff mult_minus_left)
+
     next
       case False
-      then have "(p a, a) \<in> oriented_edges" 
-        by (smt (verit) UNIV_I assms(1) edge_not_in_E_zero_elem finite_class.finite_UNIV mem_Collect_eq prod_zero tutte_matrix.nonzero_perms_def tutte_matrix.not_in_both_oriented tutte_matrix_axioms)
+      then have "(p a, a) \<in> oriented_edges" unfolding oriented_edges_def 
+
+        by (metis (mono_tags, lifting) insert.prems insertCI not_in_both_oriented oriented_edges_def)
       then have  "(tutte_matrix)$a$p a = -  Var\<^sub>0 ({a, p a})" 
         by (simp add: rev_in_oriented)
       then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) = 
@@ -2468,11 +2158,23 @@ qed
         by (simp add: "1" "2" \<open>(\<Prod>i\<in>F. local.tutte_matrix $ i $ p i) = - (\<Prod>i\<in>F. Var\<^sub>0 {i, p i})\<close>)
       then show ?thesis 
         by fastforce
+    qed
   qed
-qed
 
 qed
 
+(* TODO: 
+ clean it out by introduction of new function.*)
+lemma product_is_var_product:
+  assumes "p \<in> nonzero_perms"
+  assumes "finite A" 
+  shows "(prod (\<lambda>i. (tutte_matrix)$i$p i) (A::'a set)) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A
+    \<or> - (prod (\<lambda>i. (tutte_matrix)$i$p i) A) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A" 
+proof -
+  have "\<forall>i. {i, p i} \<in> E" using nonzero_edge_in_graph assms(1) by blast
+  then show ?thesis using product_is_var_product''[of p A]  
+    using assms nonzero_perms_elim(1) by blast
+qed
 
 
 lemma product_is_var_product_sign:
@@ -2489,8 +2191,8 @@ next
   have "var_sign p = -1"
     by (meson False var_sign_def)
   have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV::'a set)) = - prod (\<lambda> i. Var\<^sub>0 ({i, p i})) UNIV"
-    by (metis (no_types, lifting) \<open>var_sign p = - 1\<close> assms finite_class.finite_UNIV minus_equation_iff one_neq_neg_one prod.cong product_is_var_product var_sign_def)
-
+    by (metis (no_types, lifting) \<open>var_sign p = - 1\<close> assms finite_class.finite_UNIV 
+        minus_equation_iff one_neq_neg_one  product_is_var_product var_sign_def)
   then show ?thesis 
     by (simp add: \<open>var_sign p = - 1\<close>)
 qed
@@ -2511,7 +2213,7 @@ next
   have 2: "Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) (insert x F)) 1 =
     Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) F + Poly_Mapping.single {x, p x} 1) 1" 
     by (simp add: add.commute insert.hyps(2))
-   have " (Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) F) 1) *
+  have " (Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) F) 1) *
    Poly_Mapping.single (Poly_Mapping.single {x, p x} 1) 1 = Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) F +
  Poly_Mapping.single {x, p x} 1) (1::real)"
     by (simp add: mult_single[of "sum (\<lambda> i. Poly_Mapping.single {i, p i} 1) F" 1 "Poly_Mapping.single {x, p x} 1" 1])
@@ -2523,96 +2225,16 @@ next
     by (simp add:1 insert.hyps(3))
 qed 
 
-lemma product_is_var_product'':
-  assumes "p permutes (UNIV::'a set)"
-  assumes "finite A" 
-  assumes "\<forall>i \<in> A. {i, p i} \<in> E" 
-shows "(prod (\<lambda>i. (tutte_matrix)$i$p i) (A::'a set)) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A
-    \<or> - (prod (\<lambda>i. (tutte_matrix)$i$p i) A) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A" using assms(2) assms(3)
-proof(induct A)
-  case empty
-  then show ?case 
-    by auto
-next
-  case (insert a F)
-  then show ?case 
- proof(cases "(prod (\<lambda>i. (tutte_matrix)$i$p i) F) = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) F")
-    case True
-    have 1:"(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) =
-        (prod (\<lambda>i. (tutte_matrix)$i$p i) F) * (tutte_matrix)$a$p a)" 
-      by (simp add: insert.hyps(2))
-    have 2: " prod (\<lambda> i. Var\<^sub>0 ({i, p i}))  (insert a F) = 
-        prod (\<lambda> i. Var\<^sub>0 ( {i, p i})) F * ( Var\<^sub>0 ( {a, p a}))" 
-      by (simp add: insert.hyps(2) mult.commute)
-    then show ?thesis
-    proof(cases "(a, p a) \<in> oriented_edges")
-      case True
-      have "(tutte_matrix)$a$p a =  Var\<^sub>0  {a, p a}" 
-        by (simp add: True in_oriented)
-      then show ?thesis 
-        by (smt (z3) "1" "2" insert.hyps(3) insert.prems insert_iff mult_minus_left)
-    next
-      case False
-      then have "(p a, a) \<in> oriented_edges" unfolding oriented_edges_def 
-        
-        by (metis (mono_tags, lifting) insert.prems insertCI not_in_both_oriented oriented_edges_def)
-      then have  "(tutte_matrix)$a$p a = -  Var\<^sub>0 ({a, p a})" 
-        by (simp add: rev_in_oriented)
-      then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) = 
-        - prod (\<lambda> i.  Var\<^sub>0 ({i, p i}))  (insert a F))" 
-        by (simp add: True 1 2)
-      then show ?thesis 
-        by fastforce
-qed
-  next
-    case False
-    then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) F) = - prod (\<lambda> i.  Var\<^sub>0 ({i, p i})) F"
-      by (metis (no_types, lifting) add.inverse_inverse insert.hyps(3) insert.prems insert_iff)
-   have 1:"(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) =
-        (prod (\<lambda>i. (tutte_matrix)$i$p i) F) * (tutte_matrix)$a$p a)" 
-      by (simp add: insert.hyps(2))
-    have 2:"prod (\<lambda> i.  Var\<^sub>0 ({i, p i}))  (insert a F) = 
-        prod (\<lambda> i.  Var\<^sub>0 ({i, p i})) F * (  Var\<^sub>0 ({a, p a}))" 
-      by (simp add: insert.hyps(2) mult.commute)
-    then show ?thesis
-    proof(cases "(a, p a) \<in> oriented_edges")
-      case True
-      have "(tutte_matrix)$a$p a =  Var\<^sub>0  {a, p a}" 
-        by (simp add: True in_oriented)
-      then show ?thesis 
-  by (smt (z3) "1" "2" insert.hyps(3) insert.prems insert_iff mult_minus_left)
-     
-    next
-      case False
-      then have "(p a, a) \<in> oriented_edges" unfolding oriented_edges_def 
-        
-        by (metis (mono_tags, lifting) insert.prems insertCI not_in_both_oriented oriented_edges_def)
-      then have  "(tutte_matrix)$a$p a = -  Var\<^sub>0 ({a, p a})" 
-        by (simp add: rev_in_oriented)
-      then have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (insert a F) = 
-         prod (\<lambda> i.  Var\<^sub>0 ({i, p i}))  (insert a F))" 
-        by (simp add: "1" "2" \<open>(\<Prod>i\<in>F. local.tutte_matrix $ i $ p i) = - (\<Prod>i\<in>F. Var\<^sub>0 {i, p i})\<close>)
-      then show ?thesis 
-        by fastforce
-  qed
-qed
 
-qed
+
 
 lemma all_edges_in_E_prod_nonzero:
   assumes "p permutes (UNIV::'a set)"
   assumes "\<forall>i. {i, p i} \<in> E" 
   shows "(prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV::'a set)) \<noteq> 0"
-proof(cases "p \<in> nonzero_perms")
-  case True
-  then show ?thesis using product_is_var_product 
-    using nonzero_perms_def by force
-next
-  case False
+proof -
   have "finite (UNIV::'a set)" by simp
-  have "(prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV::'a set)) = 0" 
-    using False assms nonzero_perms_def by auto
- 
+
   have 1:"prod (\<lambda> i. Var\<^sub>0 ({i, p i})) (UNIV::'a set) = 
          Poly_Mapping.single (sum (\<lambda> i. Poly_Mapping.single {i, p i} (1::nat)) (UNIV::'a set)) (1::real)" 
     using product_Var_mapping[of p UNIV] assms `finite (UNIV::'a set)` 
@@ -2636,34 +2258,9 @@ next
 qed
 
 
-definition var_prod :: "('b \<Rightarrow> 'b) \<Rightarrow> 'b set \<Rightarrow> ('b set \<Rightarrow>\<^sub>0 nat) \<Rightarrow>\<^sub>0 real" where
-  "var_prod p A = prod (\<lambda> i. Var\<^sub>0 ({i, p i})) A"
 
-lemma var_prod_empty:
-  shows "var_prod p {} = 1" 
-  by (simp add: var_prod_def)
-
-lemma card_perms_factor:    
-  shows "card all_perms = fact (card (UNIV:: 'a set))"
-  unfolding all_perms_def 
-  using card_permutations 
-  by (metis  finite_class.finite_UNIV)
-
-lemma card_UNIV_one:
-  assumes "fact a = (1::nat)"
-  shows "a = 1 \<or> a = 0" 
-proof(rule ccontr)
-  assume " \<not> (a = 1 \<or> a = 0) "
-  then have "a \<ge> (2::nat)" 
-    by simp
-  then have "fact a \<ge> (fact 2::nat)" using fact_mono_nat[of "(2::nat)" a]
-    by simp
-  then have "fact a \<ge> (2::nat)" by simp 
-  then show False 
-    by (simp add: assms)
-qed  
-
-lemma unique_single_sum':
+(* we need the g sign function *)
+lemma unique_single_sum:
   assumes "finite A"
   assumes "a \<in> A"
   assumes "\<forall>a' \<in> A - {a}.  f a  \<noteq> f a'" 
@@ -2671,13 +2268,13 @@ lemma unique_single_sum':
   shows "Poly_Mapping.lookup (sum (\<lambda> b. of_int (sign b) * of_int (g b) *
       (Poly_Mapping.single (f b) (1::real))) A) (f a) \<noteq> 0" using assms
 proof(induct A)
-  
+
   case empty
   then show ?case 
     by auto
 next
   case (insert x F)
-let ?m = "(\<lambda> b. of_int (sign b) * of_int(g b) *(Poly_Mapping.single (f b) (1::real)))" 
+  let ?m = "(\<lambda> b. of_int (sign b) * of_int(g b) *(Poly_Mapping.single (f b) (1::real)))" 
   have " \<forall>a'\<in>F - {a}. f a \<noteq> f a'" 
     by (meson DiffD1 DiffD2 DiffI insert.prems(2) subsetD subset_insertI)
   then show ?case
@@ -2693,165 +2290,81 @@ let ?m = "(\<lambda> b. of_int (sign b) * of_int(g b) *(Poly_Mapping.single (f b
       using  `a \<notin> F` `\<forall>a'\<in>F - {a}. f a \<noteq> f a'` `\<forall>a'\<in>F. g a' \<in> {1::int, - 1}` 
     proof(induct F)
       case empty
-then show ?case by auto
-next
-  case (insert t T)
-  have "a \<notin> T" 
-    using insert.prems by auto
-have " poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a) +
+      then show ?case by auto
+    next
+      case (insert t T)
+      have "a \<notin> T" 
+        using insert.prems by auto
+      have " poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a) +
       poly_mapping.lookup (?m t) (f a)" 
-  by (smt (verit, del_insts) insert.hyps(1) insert.hyps(2) lookup_sum sum.insert)
-  have "a \<noteq> t" 
-    using insert.prems by auto
-  have " \<forall>a'\<in>T - {a}. f a \<noteq> f a'" 
-    by (simp add: insert.prems(2))
-  then have "f a \<noteq> f t" 
-    using insert.prems(1) insert.prems(2) by force
-  then have "poly_mapping.lookup (?m t) (f a) = 0" 
-    by (metis (no_types, lifting) int_ops(2) lookup_single_not_eq mult.right_neutral mult_of_int_commute mult_single of_int_1 single_of_int)
+        by (smt (verit, del_insts) insert.hyps(1) insert.hyps(2) lookup_sum sum.insert)
+      have "a \<noteq> t" 
+        using insert.prems by auto
+      have " \<forall>a'\<in>T - {a}. f a \<noteq> f a'" 
+        by (simp add: insert.prems(2))
+      then have "f a \<noteq> f t" 
+        using insert.prems(1) insert.prems(2) by force
+      then have "poly_mapping.lookup (?m t) (f a) = 0" 
+        by (metis (no_types, lifting)  lookup_single_not_eq mult.right_neutral mult_of_int_commute mult_single of_int_1 single_of_int)
 
-    
-    then have "poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a)"
-      using \<open>poly_mapping.lookup (\<Sum>b\<in>insert t T. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (\<Sum>b\<in>T. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) + poly_mapping.lookup (of_int (sign t) * of_int (g t) * Poly_Mapping.single (f t) 1) (f a)\<close> by linarith
-  then show ?case 
-    using \<open>\<forall>a'\<in>T - {a}. f a \<noteq> f a'\<close> \<open>a \<notin> T\<close>  
-    using insert.hyps(3) insert.prems(3) by force
-  
-qed
-  have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
-    by (simp add: insert.hyps(1) insert.hyps(2))
-  have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
+
+      then have "poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a)"
+        using \<open>poly_mapping.lookup (\<Sum>b\<in>insert t T. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (\<Sum>b\<in>T. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) + poly_mapping.lookup (of_int (sign t) * of_int (g t) * Poly_Mapping.single (f t) 1) (f a)\<close> by linarith
+      then show ?case 
+        using \<open>\<forall>a'\<in>T - {a}. f a \<noteq> f a'\<close> \<open>a \<notin> T\<close>  
+        using insert.hyps(3) insert.prems(3) by force
+
+    qed
+    have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
+      by (simp add: insert.hyps(1) insert.hyps(2))
+    have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
       poly_mapping.lookup (?m x) (f a)" 
-    by (simp add: \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) = (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) + of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1\<close> lookup_add)
-  then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) = 
+      by (simp add: \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) = (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) + of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1\<close> lookup_add)
+    then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) = 
        poly_mapping.lookup (?m x) (f a)" 
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = 0\<close> by linarith
-  
+      using \<open>poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = 0\<close> by linarith
 
-  have "poly_mapping.lookup (Poly_Mapping.single (f a) (int 1)) (f a) \<noteq> 0"
-    by simp
-  have "g a \<in> {1::int, -1}" using assms(2) assms(4) 
-    by auto
-  then have "poly_mapping.lookup ( of_int (sign a) * of_int (g a) * (Poly_Mapping.single (f a) (int 1))) (f a) \<noteq> 0"
-    using sign_def 
-    by (smt (z3) insert_iff lookup_single_eq mult.right_neutral mult_minus_left mult_of_int_commute of_int_1 of_int_minus of_nat_1 single_uminus singletonD)
 
-  then  have "poly_mapping.lookup (?m x) (f a) \<noteq> 0" 
-  using True 
-  by (smt (z3) \<open>g a \<in> {1, - 1}\<close> insert_iff lambda_one lookup_single_eq mult_minus_left of_int_1 of_int_minus sign_def single_uminus singletonD)
+    have "poly_mapping.lookup (Poly_Mapping.single (f a) (int 1)) (f a) \<noteq> 0"
+      by simp
+    have "g a \<in> {1::int, -1}" using assms(2) assms(4) 
+      by auto
+    then have "poly_mapping.lookup ( of_int (sign a) * of_int (g a) * (Poly_Mapping.single (f a) (int 1))) (f a) \<noteq> 0"
+      using sign_def 
+      by (smt (z3) insert_iff lookup_single_eq mult.right_neutral mult_minus_left mult_of_int_commute of_int_1 of_int_minus of_nat_1 single_uminus singletonD)
 
-  then show ?thesis 
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1) (f a)\<close> by presburger
-next 
-  case False
-  then have "a \<in> F" 
-    using insert.prems(1) by auto
-  then have " poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) \<noteq> 0" 
-    using insert.hyps 
-    using \<open>\<forall>a'\<in>F - {a}. f a \<noteq> f a'\<close> 
-    using insert.prems(3) by blast
-  have "(f x ) \<noteq> (f a )" 
-    by (metis False insert.prems(1) insert.prems(2) insert_Diff insert_iff)
-  have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
-    by (simp add: insert.hyps(1) insert.hyps(2))
-  have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
+    then  have "poly_mapping.lookup (?m x) (f a) \<noteq> 0" 
+      using True 
+      by (smt (z3) \<open>g a \<in> {1, - 1}\<close> insert_iff lambda_one lookup_single_eq mult_minus_left of_int_1 of_int_minus sign_def single_uminus singletonD)
+
+    then show ?thesis 
+      using \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1) (f a)\<close> by presburger
+  next 
+    case False
+    then have "a \<in> F" 
+      using insert.prems(1) by auto
+    then have " poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) \<noteq> 0" 
+      using insert.hyps 
+      using \<open>\<forall>a'\<in>F - {a}. f a \<noteq> f a'\<close> 
+      using insert.prems(3) by blast
+    have "(f x ) \<noteq> (f a )" 
+      by (metis False insert.prems(1) insert.prems(2) insert_Diff insert_iff)
+    have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
+      by (simp add: insert.hyps(1) insert.hyps(2))
+    have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
       poly_mapping.lookup (?m x) (f a)" 
-    by (simp add: \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) = (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) + of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1\<close> lookup_add)
-  have " poly_mapping.lookup (?m x) (f a) = 0"
+      by (simp add: \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) = (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) + of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1\<close> lookup_add)
+    have " poly_mapping.lookup (?m x) (f a) = 0"
 
-  by (metis (no_types, lifting) \<open>f x \<noteq> f a\<close> lookup_single_eq lookup_single_not_eq mult.assoc mult.left_neutral mult_single single_of_int single_one)
-  then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a)"
+      by (metis (no_types, lifting) \<open>f x \<noteq> f a\<close>  lookup_single_not_eq mult.assoc mult.left_neutral mult_single single_of_int single_one)
+    then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a)"
 
-  by (simp add: \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) + poly_mapping.lookup (of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1) (f a)\<close>)
+      by (simp add: \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) = poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) + poly_mapping.lookup (of_int (sign x) * of_int (g x) * Poly_Mapping.single (f x) 1) (f a)\<close>)
     then show ?thesis 
       using \<open>poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * of_int (g b) * Poly_Mapping.single (f b) 1) (f a) \<noteq> 0\<close> by presburger
-qed
+  qed
 qed
 
-lemma unique_single_sum:
-  assumes "finite A"
-  assumes "a \<in> A"
-  assumes "\<forall>a' \<in> A - {a}.  f a  \<noteq> f a'"
-  shows "Poly_Mapping.lookup (sum (\<lambda> b. of_int (sign b) * 
-      (Poly_Mapping.single (f b) (1::nat))) A) (f a) \<noteq> 0" using assms
-proof(induct A)
-  
-  case empty
-  then show ?case 
-    by auto
-next
-  case (insert x F)
-let ?m = "(\<lambda> b. of_int (sign b) * (Poly_Mapping.single (f b) (1::nat)))" 
-  have " \<forall>a'\<in>F - {a}. f a \<noteq> f a'" 
-    by (meson DiffD1 DiffD2 DiffI insert.prems(2) subsetD subset_insertI)
-  then show ?case
-  proof(cases "a =x")
-    case True
-    have "a \<notin> F" 
-      by (simp add: True insert.hyps(2))
-    have "finite F" 
-      by (simp add: insert.hyps(1))
-    then have "poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) = 0" using `a \<notin> F` `\<forall>a'\<in>F - {a}. f a \<noteq> f a'` 
-    proof(induct F)
-      case empty
-then show ?case by auto
-next
-  case (insert t T)
-  have "a \<notin> T" 
-    using insert.prems by auto
-have " poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a) +
-      poly_mapping.lookup (?m t) (f a)" 
-  by (smt (verit, del_insts) insert.hyps(1) insert.hyps(2) lookup_sum sum.insert)
-  have "a \<noteq> t" 
-    using insert.prems by auto
-  have " \<forall>a'\<in>T - {a}. f a \<noteq> f a'" 
-    by (simp add: insert.prems(2))
-  then have "f a \<noteq> f t" 
-    using insert.prems(1) insert.prems(2) by force
-  then have "poly_mapping.lookup (?m t) (f a) = 0" 
-    
-    by (simp add: sign_def)
-  then have "poly_mapping.lookup (\<Sum>b\<in>(insert t T). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>T. ?m b) (f a)"
-    
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>insert t T. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) = poly_mapping.lookup (\<Sum>b\<in>T. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) + poly_mapping.lookup (of_int (sign t) * Poly_Mapping.single (f t) (int 1)) (f a)\<close> by presburger
-  then show ?case 
-    using \<open>\<forall>a'\<in>T - {a}. f a \<noteq> f a'\<close> \<open>a \<notin> T\<close> insert.hyps(3) by presburger
-qed
-  have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
-    by (simp add: insert.hyps(1) insert.hyps(2))
-  have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
-      poly_mapping.lookup (?m x) (f a)" 
-    using \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) = (\<Sum>b\<in>F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) + of_int (sign x) * Poly_Mapping.single (f x) (int 1)\<close> lookup_add by force
-  then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) = 
-       poly_mapping.lookup (?m x) (f a)" 
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) = 0\<close> by presburger
-  have "poly_mapping.lookup (?m x) (f a) \<noteq> 0" 
-    by (simp add: True sign_def)
-    then show ?thesis 
-      using \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) = poly_mapping.lookup (of_int (sign x) * Poly_Mapping.single (f x) (int 1)) (f a)\<close> by presburger
-next
-  case False
-  then have "a \<in> F" 
-    using insert.prems(1) by auto
-  then have " poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) \<noteq> 0" 
-    using insert.hyps 
-    using \<open>\<forall>a'\<in>F - {a}. f a \<noteq> f a'\<close> by blast
-  have "(f x ) \<noteq> (f a )" 
-    by (metis False insert.prems(1) insert.prems(2) insert_Diff insert_iff)
-  have "(\<Sum>b\<in>(insert x F). ?m b) =  (\<Sum>b\<in>F. ?m b) +  ?m x" 
-    by (simp add: insert.hyps(1) insert.hyps(2))
-  have " poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a) +
-      poly_mapping.lookup (?m x) (f a)" 
-    using \<open>(\<Sum>b\<in>insert x F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) = (\<Sum>b\<in>F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) + of_int (sign x) * Poly_Mapping.single (f x) (int 1)\<close> lookup_add by force
-  have " poly_mapping.lookup (?m x) (f a) = 0" 
-    by (metis \<open>f x \<noteq> f a\<close> add_diff_cancel_left' int_ops(2) lambda_one lookup_single_eq lookup_single_not_eq mult_single single_of_int single_one)
-  then have "poly_mapping.lookup (\<Sum>b\<in>(insert x F). ?m b) (f a) =  poly_mapping.lookup (\<Sum>b\<in>F. ?m b) (f a)"
-    
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>insert x F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) = poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) + poly_mapping.lookup (of_int (sign x) * Poly_Mapping.single (f x) (int 1)) (f a)\<close> by presburger
-  then show ?thesis 
-    using \<open>poly_mapping.lookup (\<Sum>b\<in>F. of_int (sign b) * Poly_Mapping.single (f b) (int 1)) (f a) \<noteq> 0\<close> by presburger
-qed
-qed
 
 lemma el_in_sum_is_nonzero:
   assumes "finite A"
@@ -2860,28 +2373,7 @@ lemma el_in_sum_is_nonzero:
       (Poly_Mapping.single (f b) (1::nat))) A) (f a) \<noteq> 0" using assms
   by (metis (mono_tags, lifting) lookup_single_eq lookup_sum one_neq_zero sum_eq_0_iff)
 
-lemma unique_in_poly_map_sum:
-  assumes "p permutes (UNIV:: 'a set)" 
-  assumes "\<forall> p' \<in> all_perms - {p}.  
-       (\<Sum>i\<in>(UNIV:: 'a set). Poly_Mapping.single {i, p i} (1::nat)) \<noteq> 
-    (\<Sum>i\<in>(UNIV:: 'a set). Poly_Mapping.single {i, p' i} (1::nat))"
-  shows "Poly_Mapping.lookup (sum (\<lambda>p. of_int (sign p) * 
-          (Poly_Mapping.single ((\<Sum>i\<in>(UNIV:: 'a set).
-         Poly_Mapping.single {i, p i} (1::nat))) (1::nat))) all_perms) 
-        (sum (\<lambda> i. Poly_Mapping.single {i, p i} (1::nat)) (UNIV:: 'a set)) \<noteq> 0"   
-proof -
-  have "p \<in> all_perms" 
-    by (simp add: all_perms_def assms(1))
-  have "finite all_perms" 
-    by simp
-  let ?f = "(\<lambda> p'. (\<Sum>i\<in>(UNIV:: 'a set). Poly_Mapping.single {i, p' i} (1::nat)))"
-  have "\<forall>a' \<in> all_perms - {p}.  ?f p  \<noteq> ?f a'" 
-    using assms(2) by blast
-  show "Poly_Mapping.lookup (sum (\<lambda> b. of_int (sign b) * 
-      (Poly_Mapping.single (?f b) (1::nat))) all_perms) (?f p) \<noteq> 0" 
-    using unique_single_sum[of all_perms p ?f] 
-    using \<open>\<forall>a'\<in>all_perms - {p}. (\<Sum>i\<in>UNIV. Poly_Mapping.single {i, p i} 1) \<noteq> (\<Sum>i\<in>UNIV. Poly_Mapping.single {i, a' i} 1)\<close> \<open>finite all_perms\<close> \<open>p \<in> all_perms\<close> by blast
-qed
+
 
 lemma monom_is_nonzero_for_unique_p:
   assumes "p \<in> nonzero_perms" 
@@ -2900,8 +2392,8 @@ proof -
     using assms(2) by blast
   have 1:"Poly_Mapping.lookup (sum (\<lambda> b. of_int (sign b) * (var_sign b) *
       (Poly_Mapping.single (?f b) (1::real))) nonzero_perms) (?f p) \<noteq> 0" 
-    using unique_single_sum'[of nonzero_perms p ?f var_sign] `\<forall>a' \<in> nonzero_perms - {p}.  ?f p  \<noteq> ?f a'`
-     \<open>finite nonzero_perms\<close> \<open>p \<in> nonzero_perms\<close> 
+    using unique_single_sum[of nonzero_perms p ?f var_sign] `\<forall>a' \<in> nonzero_perms - {p}.  ?f p  \<noteq> ?f a'`
+      \<open>finite nonzero_perms\<close> \<open>p \<in> nonzero_perms\<close> 
     by (smt (verit) insert_iff of_int_1 of_int_minus sum.cong var_sign_def)
   have "\<forall>b \<in> nonzero_perms.
       (var_sign b)* (Poly_Mapping.single (?f b) (1::real)) =  
@@ -2916,19 +2408,19 @@ var_sign b * prod (\<lambda> i. Var\<^sub>0 ({i, b i})) UNIV"
       (prod (\<lambda>i. (tutte_matrix)$i$b i) (UNIV::'a set))) nonzero_perms) =
        (sum (\<lambda> b. of_int (sign b) * (var_sign b) *
       (Poly_Mapping.single (?f b) (1::nat))) nonzero_perms)"
-    
+
     by (smt (z3) mult.commute mult.right_neutral mult_minus_right of_int_1 of_int_minus of_nat_1 sign_def sum.cong)
   then have "Poly_Mapping.lookup (sum (\<lambda> b. of_int (sign b) * 
       (prod (\<lambda>i. (tutte_matrix)$i$b i) (UNIV::'a set))) nonzero_perms) (?f p) \<noteq> 0"
     using 1  
     by force
- have "det tutte_matrix =
+  have "det tutte_matrix =
       sum (\<lambda>p. of_int (sign p) *
      prod (\<lambda>i. (tutte_matrix)$i$p i) (UNIV :: 'a set)) nonzero_perms" 
     using det_is_sum_nonzero 
     by blast
   then show "Poly_Mapping.lookup (det tutte_matrix) (?f p) \<noteq> 0"
-    
+
     using \<open>poly_mapping.lookup (\<Sum>b\<in>nonzero_perms. of_int (sign b) * (\<Prod>i\<in>UNIV. local.tutte_matrix $ i $ b i)) (\<Sum>i\<in>UNIV. Poly_Mapping.single {i, p i} 1) \<noteq> 0\<close> by presburger
 
 qed
@@ -2953,7 +2445,7 @@ proof -
       using u_edges_def by auto
     have "e \<notin> u_edges p'" 
       using \<open>e \<in> u_edges p - u_edges p'\<close> by auto
-  
+
 
     have "Poly_Mapping.lookup (\<Sum>i\<in>(UNIV:: 'a set). Poly_Mapping.single {i, p i} (1::nat)) 
           e \<noteq> 0"  using el_in_sum_is_nonzero[of "(UNIV:: 'a set)" a "\<lambda> j. {j, p j}"] 
@@ -2970,13 +2462,13 @@ proof -
     case False
     have "u_edges p' - u_edges p \<noteq> {}" 
       using False assms(3) by blast
-then obtain e where "e \<in> u_edges p' - u_edges p" 
-  by blast
+    then obtain e where "e \<in> u_edges p' - u_edges p" 
+      by blast
     then obtain a where "e = {a, p' a} \<and> a \<in> (UNIV:: 'a set)" 
       using u_edges_def by auto
     have "e \<notin> u_edges p" 
       using \<open>e \<in> u_edges p' - u_edges p\<close> by auto
-  
+
 
     have "Poly_Mapping.lookup (\<Sum>i\<in>(UNIV:: 'a set). Poly_Mapping.single {i, p' i} (1::nat)) 
           e \<noteq> 0"  using el_in_sum_is_nonzero[of "(UNIV:: 'a set)" a "\<lambda> j. {j, p' j}"] 
@@ -3031,16 +2523,7 @@ proof -
     by blast
   then have "\<forall>i. (i, (p i)) \<in> oriented_edges \<or> ((p i), i) \<in> oriented_edges"
     using not_in_both_oriented by blast
-  have "\<forall>i. (tutte_matrix )$i$p i \<noteq> 0" 
-  proof(rule ccontr)
-    assume "\<not> (\<forall>i. local.tutte_matrix $ i $ p i \<noteq> 0)"
-    then obtain i where "tutte_matrix $ i $ p i = 0" 
-      by presburger
-    then have "{i, p i} \<notin> E" 
-      using \<open>\<forall>i. {i, p i} \<in> E\<close> zero_then_not_in_edges by blast
-    then show False 
-      by (simp add: \<open>\<forall>i. {i, p i} \<in> E\<close>)
-  qed
+
   then have "prod (\<lambda>i. (tutte_matrix)$i$p i) UNIV \<noteq> 0" 
     using all_edges_in_E_prod_nonzero[of p] 
     using \<open>\<forall>i. {i, p i} \<in> E\<close> assms(1) by fastforce
@@ -3051,8 +2534,8 @@ qed
 
 
 lemma perfect_matching_nonzero_det:
-   assumes "\<exists> M. perfect_matching E M"
-   shows "det (tutte_matrix) \<noteq> 0"
+  assumes "\<exists> M. perfect_matching E M"
+  shows "det (tutte_matrix) \<noteq> 0"
 proof -
   obtain M where "perfect_matching E M" using assms 
     by blast
@@ -3082,22 +2565,22 @@ proof -
   proof
     fix i
     assume "i \<in> Vs M" 
- have "\<exists>!e.  e \<in> M \<and> i \<in> e" 
+    have "\<exists>!e.  e \<in> M \<and> i \<in> e" 
       by (metis \<open>i \<in> Vs M\<close> \<open>matching M\<close> matching_def2)
     then obtain e where "e \<in> M \<and> i \<in> e" by auto
     then have "{e . e \<in> M \<and> i \<in> e} =  {e}" 
       using \<open>\<exists>!e. e \<in> M \<and> i \<in> e\<close> by blast
     then have "{e - {i} |e. e \<in> M \<and> i \<in> e} = {e - {i}}" by blast
     then obtain j where "e = {i, j}" using `graph_invar M` 
-      
+
       by (smt (verit, best) Diff_insert_absorb \<open>e \<in> M \<and> i \<in> e\<close> insert_Diff insert_Diff_if singleton_insert_inj_eq)
     then have "{e - {i} |e. e \<in> M \<and> i \<in> e} = {{j}}" 
 
-  using \<open>e \<in> M \<and> i \<in> e\<close> \<open>graph_invar M\<close> \<open>{e - {i} |e. e \<in> M \<and> i \<in> e} = {e - {i}}\<close> doubleton_eq_iff singletonD by force
+      using \<open>e \<in> M \<and> i \<in> e\<close> \<open>graph_invar M\<close> \<open>{e - {i} |e. e \<in> M \<and> i \<in> e} = {e - {i}}\<close> doubleton_eq_iff singletonD by force
     then show "is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})" 
       by simp
   qed
-   then have "\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})" 
+  then have "\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})" 
     by (simp add: \<open>Vs M = UNIV\<close>)
 
 
@@ -3118,7 +2601,7 @@ proof -
         have "is_singleton (\<Union>{e - {x} |e. e \<in> M \<and> x \<in> e})" 
           using `\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})` 
           by blast
-       
+
         then have "\<Union>{e - {x} |e. e \<in> M \<and> x \<in> e} = {a}" 
           by (metis (no_types, lifting)  \<open>?f x = a\<close> is_singleton_the_elem)
         have "is_singleton {e - {x} |e. e \<in> M \<and> x \<in> e}" 
@@ -3129,10 +2612,10 @@ proof -
           using \<open>{a} \<in> {e - {x} |e. e \<in> M \<and> x \<in> e}\<close> insert_Diff by force
 
 
-          have "is_singleton (\<Union>{e - {y} |e. e \<in> M \<and> y \<in> e})" 
+        have "is_singleton (\<Union>{e - {y} |e. e \<in> M \<and> y \<in> e})" 
           using `\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})` 
           by blast
-       
+
         then have "\<Union>{e - {y} |e. e \<in> M \<and> y \<in> e} = {a}" using `?f x = ?f y` 
           by (metis (no_types, lifting)  \<open>?f x = a\<close> is_singleton_the_elem)
         have "is_singleton {e - {y} |e. e \<in> M \<and> y \<in> e}" 
@@ -3140,15 +2623,15 @@ proof -
         then have "{a} \<in> {e - {y} |e. e \<in> M \<and> y \<in> e}" 
           by (metis (no_types, lifting) \<open>\<Union> {e - {y} |e. e \<in> M \<and> y \<in> e} = {a}\<close> ccpo_Sup_singleton is_singleton_the_elem singletonI)
 
-   
-          then have "{y, a} \<in> M" 
+
+        then have "{y, a} \<in> M" 
           using \<open>{a} \<in> {e - {y} |e. e \<in> M \<and> y \<in> e}\<close> insert_Diff by force
         then show "x = y" using `matching M` 
           by (metis \<open>{x, a} \<in> M\<close> doubleton_eq_iff insertCI matching_unique_match)
       qed
       show "?f ` UNIV = UNIV"
         apply safe
-        
+
          apply blast
       proof -
         fix x
@@ -3160,25 +2643,25 @@ proof -
           using \<open>graph_invar M\<close> by fastforce
         then have "y \<in> e \<and> e \<in> M" 
           using \<open>x \<in> e \<and> e \<in> M\<close> by fastforce
- then have "y \<in> Vs M" 
-   by (simp add: \<open>Vs M = UNIV\<close>)
+        then have "y \<in> Vs M" 
+          by (simp add: \<open>Vs M = UNIV\<close>)
         have "\<exists>!e.  e \<in> M \<and> y \<in> e" 
           by (metis \<open>y \<in> Vs M\<close> \<open>matching M\<close> matching_def2)
- then have "{e . e \<in> M \<and> y \<in> e} =  {e}" 
-      using \<open>\<exists>!e. e \<in> M \<and> y \<in> e\<close>  `y \<in> e \<and> e \<in> M` 
-      by blast
-    then have "{e - {y} |e. e \<in> M \<and> y \<in> e} = {e - {y}}" by blast
-    then have "{e - {y} |e. e \<in> M \<and> y \<in> e} = {{x}}" 
-      using \<open>e = {x, y}\<close> \<open>graph_invar M\<close> \<open>y \<in> e \<and> e \<in> M\<close> by force
-    
-    then have "?f y = x" by simp
-    then show "x \<in> range ?f" 
-      by blast
+        then have "{e . e \<in> M \<and> y \<in> e} =  {e}" 
+          using \<open>\<exists>!e. e \<in> M \<and> y \<in> e\<close>  `y \<in> e \<and> e \<in> M` 
+          by blast
+        then have "{e - {y} |e. e \<in> M \<and> y \<in> e} = {e - {y}}" by blast
+        then have "{e - {y} |e. e \<in> M \<and> y \<in> e} = {{x}}" 
+          using \<open>e = {x, y}\<close> \<open>graph_invar M\<close> \<open>y \<in> e \<and> e \<in> M\<close> by force
+
+        then have "?f y = x" by simp
+        then show "x \<in> range ?f" 
+          by blast
+      qed
+    qed
+    then show "?f permutes UNIV" 
+      using bij_imp_permutes by blast
   qed
-qed
-  then show "?f permutes UNIV" 
-    using bij_imp_permutes by blast
-qed
   have "u_edges ?f = M"
   proof(safe)
     {
@@ -3188,39 +2671,39 @@ qed
         by blast
       then obtain b where "b = ?f a" 
         by presburger
- have "is_singleton (\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e})" 
-          using `\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})` 
-          by blast
-       
-        then have "\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e} = {b}" 
-          by (metis (no_types, lifting)  \<open>b = ?f a\<close> is_singleton_the_elem)
-        have "is_singleton {e - {a} |e. e \<in> M \<and> a \<in> e}" 
-          using `\<forall> i. is_singleton (?singletons i)` by auto
-        then have "{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}" 
-          by (metis (no_types, lifting) \<open>\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e} = {b}\<close> ccpo_Sup_singleton is_singleton_the_elem singletonI)
-        then have "{a, b} \<in> M" 
-          using  insert_Diff 
-          by (smt (verit, del_insts) insert_commute mem_Collect_eq)
+      have "is_singleton (\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e})" 
+        using `\<forall> i. is_singleton (\<Union>{e - {i} |e. e \<in> M \<and> i \<in> e})` 
+        by blast
 
-        then show "e \<in> M" 
-          by (simp add: \<open>b = the_elem (\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e})\<close> \<open>e = {a, the_elem (\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e})}\<close>) 
+      then have "\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e} = {b}" 
+        by (metis (no_types, lifting)  \<open>b = ?f a\<close> is_singleton_the_elem)
+      have "is_singleton {e - {a} |e. e \<in> M \<and> a \<in> e}" 
+        using `\<forall> i. is_singleton (?singletons i)` by auto
+      then have "{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}" 
+        by (metis (no_types, lifting) \<open>\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e} = {b}\<close> ccpo_Sup_singleton is_singleton_the_elem singletonI)
+      then have "{a, b} \<in> M" 
+        using  insert_Diff 
+        by (smt (verit, del_insts) insert_commute mem_Collect_eq)
+
+      then show "e \<in> M" 
+        by (simp add: \<open>b = the_elem (\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e})\<close> \<open>e = {a, the_elem (\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e})}\<close>) 
     }
 
     fix e
     assume "e \<in> M"
     then obtain a b where "e = {a, b}" 
       by (meson \<open>graph_invar M\<close>)
-       then have "{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}" 
-         by (smt (verit, ccfv_SIG) Diff_insert_absorb \<open>e \<in> M\<close> \<open>graph_invar M\<close> insertCI insert_absorb mem_Collect_eq singleton_insert_inj_eq)
-       have "is_singleton {e - {a} |e. e \<in> M \<and> a \<in> e}" 
-          using `\<forall> i. is_singleton (?singletons i)` by auto
-       
-       then have "\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e} = {b}" 
-         by (metis (no_types, lifting) \<open>{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}\<close> ccpo_Sup_singleton is_singleton_def singletonD)
-       then have "?f a = b" 
-         by simp   
-       have "{a, ?f a} \<in> u_edges ?f" unfolding u_edges_def by blast 
-  
+    then have "{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}" 
+      by (smt (verit, ccfv_SIG) Diff_insert_absorb \<open>e \<in> M\<close> \<open>graph_invar M\<close> insertCI insert_absorb mem_Collect_eq singleton_insert_inj_eq)
+    have "is_singleton {e - {a} |e. e \<in> M \<and> a \<in> e}" 
+      using `\<forall> i. is_singleton (?singletons i)` by auto
+
+    then have "\<Union>{e - {a} |e. e \<in> M \<and> a \<in> e} = {b}" 
+      by (metis (no_types, lifting) \<open>{b} \<in> {e - {a} |e. e \<in> M \<and> a \<in> e}\<close> ccpo_Sup_singleton is_singleton_def singletonD)
+    then have "?f a = b" 
+      by simp   
+    have "{a, ?f a} \<in> u_edges ?f" unfolding u_edges_def by blast 
+
     then show "e \<in> u_edges ?f" 
       using \<open>e = {a, b}\<close> \<open>the_elem (\<Union> {e - {a} |e. e \<in> M \<and> a \<in> e}) = b\<close> by fastforce
   qed
@@ -3265,8 +2748,9 @@ qed
 qed
 
 lemma perfect_matching_iff_nonzero_det:
-  shows "\<exists> M. perfect_matching E M \<longleftrightarrow> det (tutte_matrix) \<noteq> 0"
-  using no_perfect_matching_zero_det tutte_matrix.perfect_matching_nonzero_det tutte_matrix_axioms by blast
+  shows "(\<exists> M. perfect_matching E M) \<longleftrightarrow> det (tutte_matrix) \<noteq> 0"
+  using no_perfect_matching_zero_det tutte_matrix.perfect_matching_nonzero_det 
+    tutte_matrix_axioms by blast
 
 
 end
