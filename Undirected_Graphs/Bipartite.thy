@@ -4,23 +4,12 @@ begin
 
 
 definition bipartite where 
-  "bipartite E \<equiv> (graph_invar E) \<and> 
-                   (\<exists> X \<subseteq> Vs E. \<forall> e \<in> E. \<exists> u v. 
-               e= {u, v}  \<and> ((u \<in> X \<and> v \<in> Vs E - X) \<or> (u \<in> Vs E -  X \<and> v \<in> X)))"
-
-(*
-locale graph_bipartite =
-  graph_abs +
-  assumes " (\<exists> X \<subseteq> Vs E. \<forall> e \<in> E. \<exists> u v.  e= {u, v}  \<and> ((u \<in> X \<and> v \<in> Vs E - X)) \<or> (u \<in> Vs E -  X \<and> v \<in> X))"
-begin
-
-end
-*)
+  "bipartite E \<equiv> graph_invar E \<and> (\<exists> X \<subseteq> Vs E. \<forall> e \<in> E. \<exists> u v. 
+                                   e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs E - X))" 
 
 definition partitioned_bipartite where
-  "partitioned_bipartite E X \<equiv>  (graph_invar E) \<and> 
-                                  X \<subseteq> Vs E  \<and> 
-              ( \<forall> e \<in> E. \<exists> u v.  e= {u, v}  \<and> ((u \<in> X \<and> v \<in> Vs E - X) \<or> (u \<in> Vs E -  X \<and> v \<in> X)))"
+  "partitioned_bipartite E X \<equiv> graph_invar E \<and> X \<subseteq> Vs E \<and> 
+              (\<forall> e \<in> E. \<exists> u v. e = {u, v} \<and> (u \<in> X \<and> v \<in> Vs E - X))"
 
 lemma part_biparite_is_bipartite: "partitioned_bipartite E X \<longrightarrow> bipartite E "
   unfolding  partitioned_bipartite_def bipartite_def by auto
@@ -34,23 +23,24 @@ definition cover_matching where
 definition reachable where
   "reachable E X  \<equiv> {v. \<exists> u \<in> X. \<exists> e \<in> E. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
 
+(*
 definition other_vertex where
   "other_vertex M x \<equiv> { v . (\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)}"
-
+*)
 
 lemma perfect_matching_member[iff?]: "perfect_matching E M \<longleftrightarrow>
   graph_invar E \<and> matching M \<and> M \<subseteq> E \<and> Vs M = Vs E"
   unfolding perfect_matching_def by simp
 
 
-lemma perfect_matching_elim[elim]:
+lemma perfect_matchingE:
   assumes "perfect_matching E M"
   shows "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
   using assms 
     by(auto simp: perfect_matching_member)
 
 
-lemma perfect_matching_intro[intro]:
+lemma perfect_matchingI:
   assumes "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
   shows "perfect_matching E M" 
   using assms
@@ -63,20 +53,22 @@ lemma card_edge:
   by (simp add: assms card_2_iff)
 
 lemma reachable_is_union:
-  shows "reachable E X = \<Union> {r. \<exists> x\<in>X.  r = (reachable E {x})}"
+  shows "reachable E X = \<Union> {r. \<exists> x\<in>X. r = (reachable E {x})}"
 proof -
   show ?thesis unfolding reachable_def by blast
 qed
 
+(*
 lemma reach_singleton:
   "reachable E {x} = other_vertex E x"
   unfolding reachable_def other_vertex_def by auto
+
 
 lemma reachable_other_vertex:
   shows "reachable E X = \<Union>  {r. \<exists> x\<in>X. r = other_vertex E x}"
   using reach_singleton reachable_is_union 
   by (smt (verit, best) Collect_cong)
-
+*)
 
 lemma reachable_subset:
   assumes "A \<subseteq> X"
@@ -85,63 +77,29 @@ lemma reachable_subset:
   by (smt (verit, best) Collect_mono assms subset_eq)
 
 
-
-
 lemma reachble_bipartite:
   assumes "partitioned_bipartite E A"
-  shows "reachable E A =  Vs E - A" 
+  shows "reachable E A = Vs E - A" 
 proof -
-  have " (graph_invar E)" using assms unfolding partitioned_bipartite_def by auto
-  have " A \<subseteq> Vs E" using assms unfolding partitioned_bipartite_def by auto
-  have 1:"( \<forall> e \<in> E. \<exists> u v.  e= {u, v}  \<and> ((u \<in> A \<and> v \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> v \<in> A)))"
+  have partition:"\<forall> e \<in> E. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A)"
     using assms unfolding partitioned_bipartite_def by auto
-
   show ?thesis
   proof
-    show "reachable E A \<subseteq> Vs E - A" 
-    proof
-      fix x
-      assume "x \<in> reachable E A"
-      then have "\<exists> u \<in> A. \<exists> e \<in> E. x \<noteq> u \<and> u \<in> e \<and> x\<in> e" unfolding reachable_def by auto
-      then obtain u e where "u \<in> A \<and> e \<in> E \<and> x \<noteq> u \<and> u \<in> e \<and> x\<in> e" by auto
-      then have "e= {u, x}  \<and> ((u \<in> A \<and> x \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> x \<in> A))" using 1
-        using insert_absorb insert_commute by fastforce
-      then have "(u \<in> A \<and> x \<in> Vs E - A)"
-        using \<open>u \<in> A \<and> e \<in> E \<and> x \<noteq> u \<and> u \<in> e \<and> x \<in> e\<close> by force 
-      then show  "x \<in> Vs E - A" by auto
-    qed
+    show "reachable E A \<subseteq> Vs E - A"
+      unfolding reachable_def using partition insert_absorb insert_commute by fastforce
     show "Vs E - A \<subseteq> reachable E A"
     proof
       fix x
       assume "x \<in> Vs E - A"
-      then have "\<exists> e \<in> E. x \<in> e" 
-        by (meson DiffD1 vs_member_elim)
-
-      then obtain e where "e \<in> E \<and> x \<in> e" by auto
-      then have "\<exists> u v.  e= {u, v}  \<and> ((u \<in> A \<and> v \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> v \<in> A))" 
-        using 1 by auto
-      then obtain u v where 2:"e= {u, v}  \<and> ((u \<in> A \<and> v \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> v \<in> A))" by auto
-      show "x \<in> reachable E A"
-      proof(cases "x = u")
-        case True
-        have "x=u" using True by auto
-        then  have "e= {x, v}  \<and> ((x \<in> A \<and> v \<in> Vs E - A) \<or> (x \<in> Vs E -  A \<and> v \<in> A))" using 2 by auto
-
-        then have "(x \<in> Vs E -  A \<and> v \<in> A)" using \<open>x \<in> Vs E -  A\<close> by auto
-        then have "x \<in> {v. \<exists> u \<in> A. \<exists> e \<in> E. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
-          by (smt (verit, ccfv_SIG) DiffD2 \<open>\<And>thesis. (\<And>u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A \<or> u \<in> Vs E - A \<and> v \<in> A) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> \<open>e \<in> E \<and> x \<in> e\<close> insertCI mem_Collect_eq)
-        then show ?thesis using reachable_def
-          by (simp add: reachable_def)
-      next
-        case False
-        then have "x = v" using \<open>e \<in> E \<and> x \<in> e\<close> 2 by simp
-        then have "e= {u, x}  \<and> ((u \<in> A \<and> x \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> x \<in> A))" using 2 by auto
-        then have "(u \<in> A \<and> x \<in> Vs E - A)" 
-          using \<open>x \<in> Vs E - A\<close> by blast
-        then have "x \<in> {v. \<exists> u \<in> A. \<exists> e \<in> E. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}" 
-          using \<open>e = {u, x} \<and> (u \<in> A \<and> x \<in> Vs E - A \<or> u \<in> Vs E - A \<and> x \<in> A)\<close> \<open>e \<in> E \<and> x \<in> e\<close> insert_compr by force
-        then show ?thesis  by (simp add: reachable_def)
-      qed
+      then obtain e where "e \<in> E \<and> x \<in> e" 
+        using DiffD1 vs_member_elim  by metis
+      then obtain u  where 2:"e = {u, x} \<and> (u \<in> A \<and> x \<in> Vs E - A) \<and> u \<noteq> x" 
+        using partition \<open>x \<in> Vs E - A\<close> by fastforce
+      then have "u \<in> e" 
+        by blast
+      then show "x \<in> reachable E A" 
+        unfolding reachable_def 
+        by (smt (verit) "2" \<open>e \<in> E \<and> x \<in> e\<close> mem_Collect_eq)
     qed
   qed
 qed
@@ -149,79 +107,39 @@ qed
 lemma partitioned_bipartite_swap:
   assumes "partitioned_bipartite E A"
   shows "partitioned_bipartite E (Vs E - A)" 
-proof -
-  have "(graph_invar E)" using assms partitioned_bipartite_def by auto
-  have " (Vs E - A)  \<subseteq> Vs E" 
-    by simp
-  have "Vs E - (Vs E - A) =  A" 
-    by (metis Diff_partition Diff_subset_conv Un_Diff_cancel \<open>Vs E - A \<subseteq> Vs E\<close> assms double_diff partitioned_bipartite_def)
-  then show ?thesis 
-  unfolding partitioned_bipartite_def 
-  by (metis \<open>Vs E - A \<subseteq> Vs E\<close> assms partitioned_bipartite_def)
-qed
+  using assms unfolding partitioned_bipartite_def  by fastforce 
 
 lemma reachable_intersection_is_empty:
   assumes "partitioned_bipartite E A"
-  shows" \<forall>X \<subseteq> A. reachable E X \<inter> X = {}"
-proof
-  fix X 
-  show "X \<subseteq> A \<longrightarrow> reachable E X \<inter> X = {}"
-  proof
-    assume "X \<subseteq> A"
-    then have "reachable E X \<subseteq> reachable E A" unfolding reachable_def by auto
-    then have "reachable E X \<subseteq> Vs E - X" using reachble_bipartite assms
-      by (smt (verit) Diff_iff \<open>X \<subseteq> A\<close> subsetD subsetI)
-    then show "reachable E X \<inter> X = {}" 
-      by (simp add: Diff_eq disjoint_eq_subset_Compl)
-  qed
+  shows" \<forall>X \<subseteq> A. reachable E X \<inter> X = {}" 
+proof safe
+  fix X x
+  assume "X \<subseteq> A" "x \<in> reachable E X" "x \<in> X"
+  then show "x \<in> {}" 
+    by (metis Diff_iff assms in_mono reachable_subset reachble_bipartite)
 qed
 
-lemma asd:
+lemma reachable_in_matching_singl:
   assumes "x \<in> Vs M"
   assumes "matching M"
   assumes" M \<subseteq> E"
   assumes "graph_invar E"
-  shows"card (other_vertex M x) = 1"
+  shows "\<exists> v. (reachable M {x}) = {v}"
 proof -
   have "\<exists>!e. e \<in> M \<and> x \<in> e"  using matching_def2 assms(2) assms(1)  by metis
-  then obtain e where 1: " e \<in> M \<and> x \<in> e" by auto
-  have 3:"\<forall> e' \<in> M. e' \<noteq> e \<longrightarrow>x \<notin> e'"
-  proof(rule ccontr)
-    assume "\<not> (\<forall>e'\<in>M. e' \<noteq> e \<longrightarrow> x \<notin> e')"
-    then have "\<exists> e'\<in>M. e' \<noteq> e \<longrightarrow> x \<in> e'" by blast   
-    then obtain e' where 2: " e'\<in>M \<and> e' \<noteq> e \<and> x \<in> e'" 
-      by (meson \<open>\<not> (\<forall>e'\<in>M. e' \<noteq> e \<longrightarrow> x \<notin> e')\<close>)
-    show False 
-      using "1" "2" \<open>\<exists>!e. e \<in> M \<and> x \<in> e\<close> by auto
-  qed
-  have "\<exists>v.  (\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)"
-    by (metis "1" assms(3) assms(4) insertCI subsetD)
-  then obtain v where "(\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)" by auto
-
-  have "\<forall>v'.  (\<exists> e\<in>M. x\<in> e \<and> v'\<in>e \<and> x \<noteq> v') \<longrightarrow> v = v'"
-  proof(rule ccontr)
-    assume " \<not> (\<forall>v'. (\<exists>e\<in>M. x \<in> e \<and> v' \<in> e \<and>  x \<noteq> v') \<longrightarrow>v = v')"
-    then have "\<exists> v'. (\<exists>e\<in>M. x \<in> e \<and> v' \<in> e \<and>  x \<noteq> v') \<and> v \<noteq> v'" by simp
-    then obtain v' where "(\<exists>e\<in>M. x \<in> e \<and> v' \<in> e \<and>  x \<noteq> v') \<and> v \<noteq> v'" by auto
-    then obtain e' where " x \<in> e' \<and> v' \<in> e' \<and>  x \<noteq> v' \<and> v \<noteq> v'" by auto
-    then have  "\<exists> e' \<in> M. e' \<noteq> e \<longrightarrow> x \<in> e'" 
-      using "1" by blast
-    then show False using 3
-      by (metis \<open>(\<exists>e\<in>M. x \<in> e \<and> v' \<in> e \<and> x \<noteq> v') \<and> v \<noteq> v'\<close> \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> assms(3) assms(4) empty_iff insert_iff subsetD)
-  qed
-  then have 4:"\<exists>!v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v" 
+  then obtain e where e: " e \<in> M \<and> x \<in> e" by auto
+  then have x_one_edge:"\<forall> e' \<in> M. e' \<noteq> e \<longrightarrow> x \<notin> e'" 
+    using \<open>\<exists>!e. e \<in> M \<and> x \<in> e\<close> by blast
+  have "\<exists>v. (\<exists> e\<in>M. x \<in> e \<and> v\<in>e \<and> x \<noteq> v)"
+    by (metis e assms(3) assms(4) insertCI subsetD)
+  then obtain v where "(\<exists> e\<in>M. x\<in> e \<and> v \<in> e \<and> x \<noteq> v)" by auto
+  have "\<forall>v'. (\<exists> e\<in>M. x\<in> e \<and> v'\<in>e \<and> x \<noteq> v') \<longrightarrow> v = v'" 
+    by (metis x_one_edge \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> assms(3)
+        assms(4) empty_iff insert_iff subsetD)
+  then have "\<exists>!v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v" 
     using \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> by blast
-  let ?P = "(\<lambda> v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v)" 
-  have "Ex1  ?P" using 4 by auto
-  have "Ex1 ?P \<equiv> \<exists> u. {u. ?P u} = {u}"  unfolding  HOL.nitpick_unfold(124) by auto
-
-
-  then have "\<exists>v. {v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v} = {v}" unfolding Nitpick.Ex1_unfold
-    using "4" \<open>\<exists>!v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v \<equiv> \<exists>u. {u. \<exists>e\<in>M. x \<in> e \<and> u \<in> e \<and> x \<noteq> u} = {u}\<close> by presburger
-
-  then have "card {v. \<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v} = 1"
-    by fastforce
-  then show ?thesis unfolding other_vertex_def  by simp
+  then show ?thesis unfolding reachable_def 
+    by auto
 qed
 
 lemma finite_reachable:
@@ -237,11 +155,26 @@ proof -
     using finite_subset by blast
 qed
 
+lemma vertex_not_in_source_then_not_reachable:
+  assumes "matching M"
+  assumes "{x, y} \<in> M"
+  assumes "x \<notin> X"
+  shows "y \<notin> reachable M X"
+proof(rule ccontr)
+  assume "\<not> y \<notin> reachable M X"
+  then show False 
+    unfolding reachable_def 
+    by (smt (verit) assms insert_iff matching_unique_match mem_Collect_eq singleton_iff)
+qed
+
+lemma reachable_insert: "reachable M (insert x F) = reachable M F \<union> reachable M {x}"
+ unfolding reachable_def  by blast
+
 lemma card_ther_vertex:
-  assumes "X \<subseteq> Vs M"
+  assumes "graph_invar E"
   assumes "matching M"
   assumes" M \<subseteq> E"
-  assumes "graph_invar E"
+  assumes "X \<subseteq> Vs M"
   shows" card X = card (reachable M X)" 
 proof -
   have "finite X" using assms(1)
@@ -253,68 +186,25 @@ proof -
     then show ?case 
       by (simp add: reachable_def)
   next
-    case (insert x F)
-    have " F \<subseteq> Vs M \<Longrightarrow> card F = card (reachable M F)"
-      using insert.hyps(3) by blast
-    have " insert x F \<subseteq> Vs M" using  insert.hyps 
-      using insert.prems by blast
-    then have "x \<in> Vs M" by auto
-    then have "card (other_vertex M x) = 1"
-      by (meson asd assms(2) assms(3) assms(4))
-    then have "\<exists>v. (other_vertex M x) = {v}"
-      by (meson card_1_singletonE)
-    then obtain v where " (other_vertex M x) = {v}" by auto
-    then have "(\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)" unfolding other_vertex_def by auto
-    then obtain e where "e\<in>M \<and> x\<in> e \<and> v\<in>e \<and> x \<noteq> v" by auto
-    then have " e = {x, v}" 
-      using assms(3) assms(4) by fastforce
-    have "reachable M {x} = other_vertex M x"
-      by (simp add: reach_singleton)
-    have "v \<notin> reachable M F"
-    proof(rule ccontr)
-      assume "\<not> v \<notin> reachable M F"
-      then have  "v \<in> reachable M F" by auto
-      then have "\<exists> u \<in> F. \<exists> e \<in> M. v \<noteq> u \<and> u \<in> e \<and> v\<in> e" unfolding reachable_def 
-        by (smt (verit, best) \<open>\<exists>e\<in>M. x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> assms(3) assms(4) assms(2) insert.hyps(2) insert_iff matching_def2 mem_Collect_eq singletonD subsetD vs_member_intro)
-      then  obtain u where "u \<in> F \<and> (\<exists> e \<in> M. v \<noteq> u \<and> u \<in> e \<and> v\<in> e)" by auto
-      then obtain e' where "e' \<in> M \<and> v \<noteq> u \<and> u \<in> e' \<and> v\<in> e'" by auto
-      then have "e' = {u, v}"  using assms(4) assms(3)
-        by (metis \<open>e = {x, v}\<close> \<open>e \<in> M \<and> x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> assms(2) insertE insert_absorb matching_unique_match singleton_insert_inj_eq')
-      have " x\<noteq> u" using insert.hyps(2) `u \<in> F \<and> (\<exists> e \<in> M. v \<noteq> u \<and> u \<in> e \<and> v\<in> e)` by auto
-      have "x \<noteq> u \<and> x \<in> e \<and> u \<in> e'"
-        by (simp add: \<open>e \<in> M \<and> x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> \<open>e' \<in> M \<and> v \<noteq> u \<and> u \<in> e' \<and> v \<in> e'\<close> \<open>x \<noteq> u\<close>)
-      have "e \<noteq> e'" 
-        using \<open>e = {x, v}\<close> \<open>e' = {u, v}\<close> \<open>x \<noteq> u \<and> x \<in> e \<and> u \<in> e'\<close> by blast
-      then show False 
-        by (meson \<open>e \<in> M \<and> x \<in> e \<and> v \<in> e \<and> x \<noteq> v\<close> \<open>e' \<in> M \<and> v \<noteq> u \<and> u \<in> e' \<and> v \<in> e'\<close> assms(2) matching_unique_match)
-    qed
-    then have 1: "reachable M {x} \<inter> reachable M F = {}" 
-      by (simp add: \<open>other_vertex M x = {v}\<close> \<open>reachable M {x} = other_vertex M x\<close>)
-    have "finite (reachable M {x})"
-      by (simp add: \<open>other_vertex M x = {v}\<close> \<open>reachable M {x} = other_vertex M x\<close>)
-
-    then have 2: "card (reachable M {x}) + card( reachable M F) = card (reachable M {x} \<union> reachable M F)"
-      using finite_reachable 1
-      by (metis assms(4) assms(3) card_Un_disjoint)
-
+    case (insert x F)  
+    then have "\<exists>v. reachable M {x} = {v}"
+      using reachable_in_matching_singl assms(1-3) by fastforce
+    then obtain v where v:"reachable M {x} = {v}" by auto
+    then obtain e where e: "e \<in> M \<and> x \<in> e \<and> v \<in> e \<and> x \<noteq> v" 
+      unfolding reachable_def by auto
+    then have "e = {x, v}" 
+      using assms(1) assms(3) by fastforce
+    then have "v \<notin> reachable M F" 
+      by (metis assms(2) e insert.hyps(2) vertex_not_in_source_then_not_reachable)
+    then have  "reachable M {x} \<inter> reachable M F = {}" 
+      by (simp add: v)
+    then have card_sum_u: "card (reachable M {x}) + card( reachable M F) = 
+                  card (reachable M {x} \<union> reachable M F)"
+      by (metis finite_reachable assms(1) assms(3) card_Un_disjoint)
     have " reachable M (insert x F) = reachable M F \<union> reachable M {x}"
-    proof
-      show " reachable M (insert x F) \<subseteq> reachable M F \<union> reachable M {x}"
-      proof 
-        fix u
-        assume "u \<in> reachable  M (insert x F)"
-        show "u \<in> reachable M F \<union> reachable M {x}" unfolding reachable_def 
-          by (smt (verit, ccfv_threshold) UnCI \<open>u \<in> reachable M (insert x F)\<close> insert_iff mem_Collect_eq reachable_def)
-      qed
-      show "reachable M F \<union> reachable M {x} \<subseteq> reachable M (insert x F)" unfolding reachable_def 
-        by blast
-    qed
-
-    then have "card (reachable M (insert x F)) =
-          card (reachable M F) + card (reachable M {x})" using 2
-      using \<open>other_vertex M x = {v}\<close> \<open>reachable M {x} = other_vertex M x\<close> by auto
+      by (meson reachable_insert)
     then have 3: "card (reachable M (insert x F)) = card (reachable M F) + 1"
-      using \<open>card (other_vertex M x) = 1\<close> \<open>reachable M {x} = other_vertex M x\<close> by presburger
+      using v card_sum_u  by simp
     have "card (insert x F) = card F + 1"
       by (simp add: insert.hyps(1) insert.hyps(2)) 
     then show  "card (insert x F) = card (reachable M (insert x F))" using 3
@@ -322,75 +212,66 @@ proof -
   qed
 qed
 
-
-
-lemma halrewrw:
+lemma part_bipart_of_cover_matching:
   fixes E :: "'a set set"
   fixes M
   assumes "partitioned_bipartite E A"
   assumes "cover_matching E M A"
   shows "partitioned_bipartite M A"
 proof -
-  have 1:"M \<subseteq> E" using assms(2) unfolding cover_matching_def by auto
+  have M_subs:"M \<subseteq> E" 
+    using assms(2) unfolding cover_matching_def by auto
   have "graph_invar E"
     using assms(1) partitioned_bipartite_def by auto
-  then have "graph_invar M" using 1
-    by (meson Vs_subset finite_subset subsetD)
-  have "A \<subseteq> Vs M" using assms(2) unfolding cover_matching_def by auto
-  have " ( \<forall> e \<in> E. \<exists> u v.  e= {u, v}  \<and> ((u \<in> A \<and> v \<in> Vs E - A) \<or> (u \<in> Vs E -  A \<and> v \<in> A)))"
+  then have "graph_invar M"
+    by (meson M_subs Vs_subset finite_subset subsetD)
+  have "A \<subseteq> Vs M" 
+    using assms(2) unfolding cover_matching_def by auto
+  have "\<forall> e \<in> E. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A)"
     using assms(1) unfolding partitioned_bipartite_def by auto
-  have "\<forall>e \<in> M.  \<exists> u v.  e= {u, v}  \<and> ((u \<in> A \<and> v \<in> Vs M - A) \<or> (u \<in> Vs M -  A \<and> v \<in> A))" 
-    by (metis "1" Diff_iff \<open>\<forall>e\<in>E. \<exists>u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A \<or> u \<in> Vs E - A \<and> v \<in> A)\<close> edges_are_Vs in_mono insert_commute)
-  show ?thesis 
-    using \<open>A \<subseteq> Vs M\<close> \<open>\<forall>e\<in>M. \<exists>u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs M - A \<or> u \<in> Vs M - A \<and> v \<in> A)\<close> \<open>graph_invar M\<close> partitioned_bipartite_def by auto
+  then have "\<forall>e \<in> M. \<exists> u v. e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs M - A)" 
+    by (metis M_subs Diff_iff edges_are_Vs insert_commute subsetD)
+  then show ?thesis 
+    unfolding partitioned_bipartite_def
+    using \<open>A \<subseteq> Vs M\<close> \<open>graph_invar M\<close>  by auto
 qed
-
-
 
 lemma hall_reachable:
   fixes E :: "'a set set"
-  assumes "partitioned_bipartite E A"
   assumes "cover_matching E M A"
   shows "\<forall> X \<subseteq> A. card (reachable M X) = card X"
-proof
-  show " \<And>X. X \<subseteq> A \<longrightarrow>  card (reachable M X) = card X"
-  proof
-    fix X
-    assume "X \<subseteq> A"
-    show "card (reachable M X) = card X" using card_ther_vertex 
-      by (smt (verit, ccfv_SIG) \<open>X \<subseteq> A\<close> assms(2) cover_matching_def subset_trans)
-  qed
-qed
+  using assms card_ther_vertex 
+  unfolding cover_matching_def 
+  by fastforce
 
+lemma graph_subs_reach:
+  assumes "M \<subseteq> E"
+  shows "reachable M X \<subseteq> reachable E X"
+ using assms subset_eq unfolding reachable_def  by fastforce
 
 lemma hall1:
   fixes E :: "'a set set"
-  assumes "partitioned_bipartite E A"
   assumes "cover_matching E M A"
   shows "\<forall> X \<subseteq> A. card (reachable E X) \<ge> card X"
-proof
+proof rule+
   fix X
-  show "X \<subseteq> A \<longrightarrow> card X \<le> card (reachable E X)"
-  proof
-    assume "X \<subseteq> A"
-    show "card X \<le> card (reachable E X)"
-    proof -
-      have 1:"finite (reachable M X)" 
-        by (meson assms(2) cover_matching_def finite_reachable)
-      have "E \<subseteq> E" by auto
-      then have 2:"finite (reachable E X)"
-        by (meson assms(2) cover_matching_def finite_reachable)
-      have "reachable M X \<subseteq> reachable E X" unfolding reachable_def 
-        by (smt (verit) Collect_mono assms(2) cover_matching_def subset_iff)
-      then have 3: "card (reachable M X) \<le> card (reachable E X)" using 1 2 
-        by (simp add: card_mono)
-      have "card X = card (reachable M X)" 
-        by (metis \<open>X \<subseteq> A\<close> assms(1) assms(2) hall_reachable)
-      then show ?thesis using 3 by auto
-    qed
+  assume "X \<subseteq> A"
+  show "card X \<le> card (reachable E X)"
+  proof -
+    have 1:"finite (reachable M X)" 
+      by (meson assms cover_matching_def finite_reachable)
+    have "E \<subseteq> E" by auto
+    then have 2:"finite (reachable E X)"
+      by (meson assms cover_matching_def finite_reachable)
+    have "reachable M X \<subseteq> reachable E X" 
+      by (meson assms cover_matching_def graph_subs_reach)
+    then have 3: "card (reachable M X) \<le> card (reachable E X)" using 1 2 
+      by (simp add: card_mono)
+    have "card X = card (reachable M X)" 
+      by (metis \<open>X \<subseteq> A\<close> assms hall_reachable)
+    then show ?thesis using 3 by auto
   qed
 qed
-
 
 lemma hall2:
   fixes E :: "'a set set"
@@ -421,66 +302,44 @@ proof(induct "card A" arbitrary: A E rule: less_induct)
         case False
         have "\<exists> e. e \<in> E" 
           using False by blast
-        then obtain e where "\<exists>u v. e \<in>E \<and> e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A \<or> u \<in> Vs E - A \<and> v \<in> A)"
+        then obtain e where e:"\<exists>u v. e \<in> E \<and> e = {u, v} \<and> u \<in> A \<and> v \<in> Vs E - A"
           by (metis less.prems(3) partitioned_bipartite_def)
-        then obtain u v where "e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A)" 
+        then obtain u v where u_v: "e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A)" 
           by auto
         then  have "(u \<in> A \<and> v \<in> Vs E - A)" by auto
-        have " {u, v} \<in> E"
-          using \<open>\<exists>u v. e \<in> E \<and> e = {u, v} \<and> (u \<in> A \<and> v \<in> Vs E - A \<or> u \<in> Vs E - A \<and> v \<in> A)\<close> \<open>e = {u, v} \<and> u \<in> A \<and> v \<in> Vs E - A\<close> by fastforce
+        have " {u, v} \<in> E" using e u_v by fastforce
         let ?E_s = "E - {e. e \<in> E \<and> (u \<in> e \<or> v \<in> e)}"
         let ?A_s = "(A \<inter> Vs ?E_s)- {u}"
         let ?B_s = "Vs ?E_s - ?A_s - {v}"
         have 0:"?E_s \<subseteq> E" 
           by force
-        have "card ?A_s < card A"
-          by (smt (verit, ccfv_threshold) Diff_disjoint Diff_subset Int_commute Int_insert_right_if1 `(u \<in> A \<and> v \<in> Vs E - A)` finite_subset inf_le1 insert_not_empty less.prems(1) less.prems(2) psubsetI psubset_card_mono subset_trans)
+        have "card ?A_s < card A" 
+          by (smt (verit, ccfv_threshold) Diff_disjoint Diff_subset Int_commute
+              Int_insert_right_if1 `(u \<in> A \<and> v \<in> Vs E - A)` finite_subset inf_le1 insert_not_empty 
+              less.prems(1) less.prems(2) psubsetI psubset_card_mono subset_trans)
         have 2: "graph_invar ?E_s" 
           by (meson Diff_iff Diff_subset Vs_subset finite_subset less.prems(1))
         have 3: "?A_s \<subseteq> Vs ?E_s" by blast
-        have " ( \<forall> e \<in> ?E_s. \<exists> u v.  e= {u, v}  
-            \<and> ((u \<in> ?A_s \<and> v \<in> Vs ?E_s - ?A_s) \<or> (u \<in> Vs ?E_s -  ?A_s \<and> v \<in> ?A_s)))"
+        have " ( \<forall> e \<in> ?E_s. \<exists> u v.  e = {u, v} \<and> (u \<in> ?A_s \<and> v \<in> Vs ?E_s - ?A_s))"
         proof
           fix e'
           assume "e' \<in> ?E_s" 
           then have "\<exists>u v. e' = {u, v} \<and> u \<noteq> v" 
             using "2" by blast
-          then obtain u' v' where "e' = {u', v'} \<and> u' \<noteq> v'" by auto
-          have "e' \<in> E" using 0 `e' \<in> ?E_s` by auto
-          then have 4:"((u' \<in> A \<and> v' \<in> Vs E - A) \<or> (u' \<in> Vs E -  A \<and> v' \<in> A))"
+          then obtain u' v' where u'_v': "e' = {u', v'} \<and> u' \<noteq> v' \<and> (u' \<in> A \<and> v' \<in> Vs E - A)"
             using `partitioned_bipartite E A` unfolding partitioned_bipartite_def 
-            by (metis \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> doubleton_eq_iff)
-          show " \<exists> u v.  e'= {u, v}  
-            \<and> ((u \<in> ?A_s \<and> v \<in> Vs ?E_s - ?A_s) \<or> (u \<in> Vs ?E_s -  ?A_s \<and> v \<in> ?A_s))"
-          proof(cases "(u' \<in> A \<and> v' \<in> Vs E - A)")
-            case True
-            have "u' \<in> A"  by (simp add: True)
+            by (metis (no_types, lifting) Diff_iff \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close>)
             then have "u' \<in> ?A_s" 
-              using UnionI \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
-            have "v' \<in> Vs E - A"
-              using True by auto
+              using UnionI u'_v' \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
+
             then have "v' \<in> Vs ?E_s - ?A_s"
-              using IntE \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
-            then show ?thesis 
-              using \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>u' \<in> A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u}\<close> by blast
-          next
-            case False
-            have 5:"(u' \<in> Vs E -  A \<and> v' \<in> A)" using False 4 by auto
-            have "v' \<in> A"  
-              by (simp add: "5")
-            then have "v' \<in> ?A_s" 
-              using UnionI \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
-            have "u' \<in> Vs E - A"
-              using 5 by auto
-            then have "u' \<in> Vs ?E_s - ?A_s"
-              using IntE \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
-            then show ?thesis 
-              using \<open>e' = {u', v'} \<and> u' \<noteq> v'\<close> \<open>v' \<in> A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u}\<close> by blast
-          qed
-        qed
+                using IntE u'_v' \<open>e' \<in> E - {e \<in> E. u \<in> e \<or> v \<in> e}\<close> by auto
+              then show "\<exists> ua va. e' = {ua, va} \<and> (ua \<in> ?A_s \<and> va \<in> Vs ?E_s - ?A_s)"
+                using \<open>u' \<in> A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u}\<close> u'_v' by blast
+            qed
         then have "partitioned_bipartite ?E_s ?A_s"
           using "2" 3 
-          by (simp add: \<open>\<forall>e\<in>E - {e \<in> E. u \<in> e \<or> v \<in> e}. \<exists>ua va. e = {ua, va} \<and> (ua \<in> A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u} \<and> va \<in> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - (A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u}) \<or> ua \<in> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - (A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u}) \<and> va \<in> A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u})\<close> partitioned_bipartite_def)
+          by (simp add: \<open>( \<forall> e \<in> ?E_s. \<exists> u v.  e = {u, v} \<and> (u \<in> ?A_s \<and> v \<in> Vs ?E_s - ?A_s))\<close> partitioned_bipartite_def)
 
         have "reachable ?E_s ?A_s = Vs ?E_s - ?A_s" 
           using \<open>partitioned_bipartite (E - {e \<in> E. u \<in> e \<or> v \<in> e}) (A \<inter> Vs (E - {e \<in> E. u \<in> e \<or> v \<in> e}) - {u})\<close> reachble_bipartite by blast
@@ -741,8 +600,7 @@ proof(induct "card A" arbitrary: A E rule: less_induct)
         qed
 
         have "(\<forall>e\<in> ?X_gr. \<exists>u v. e = {u, v} \<and>
-              (u \<in> X \<and> v \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X \<or>
-               u \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X \<and> v \<in> X))"
+              (u \<in> X \<and> v \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X))"
         proof 
           fix e
           assume "e \<in> ?X_gr"
@@ -765,9 +623,8 @@ proof(induct "card A" arbitrary: A E rule: less_induct)
             using \<open>X \<subset> A\<close> \<open>e = {u, v} \<and> u \<in> A \<and> v \<in> Vs E - A\<close> by blast
 
 
-          then  show "\<exists>u v. e = {u, v} \<and>
-              (u \<in> X \<and> v \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X \<or>
-               u \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X \<and> v \<in> X)"
+          then  show "( \<exists>u v. e = {u, v} \<and>
+              (u \<in> X \<and> v \<in> Vs {e \<in> E. \<exists>x\<in>X. x \<in> e} - X))"
             using \<open>e = {u, v} \<and> u \<in> A \<and> v \<in> Vs E - A\<close> \<open>x \<in> X \<and> x \<in> e\<close> by blast
         qed   
         then  have "partitioned_bipartite ?X_gr X"
@@ -1209,13 +1066,13 @@ proof
     have "card A = card (reachable M A)"
       by (metis \<open>cover_matching E M A\<close> assms hall_reachable order_refl)
     have "reachable M A \<subseteq> reachable E A"
-      by (metis Diff_mono Vs_subset \<open>cover_matching E M A\<close> assms cover_matching_def halrewrw order_refl reachble_bipartite)
+      by (metis Diff_mono Vs_subset \<open>cover_matching E M A\<close> assms cover_matching_def part_bipart_of_cover_matching order_refl reachble_bipartite)
     have "Vs E - A = reachable E A" by (simp add: assms reachble_bipartite)
 
     then have "reachable M A = Vs E - A"
       by (metis \<open>(\<forall>X\<subseteq>A. card X \<le> card (reachable E X)) \<and> card A = card (Vs E - A)\<close> \<open>card A = card (reachable M A)\<close> \<open>cover_matching E M A\<close> \<open>reachable M A \<subseteq> reachable E A\<close> card_subset_eq cover_matching_def finite_Diff)
      have " Vs E  = Vs M"
-      by (metis Diff_partition \<open>cover_matching E M A\<close> \<open>reachable M A = Vs E - A\<close> assms halrewrw partitioned_bipartite_def reachble_bipartite)
+      by (metis Diff_partition \<open>cover_matching E M A\<close> \<open>reachable M A = Vs E - A\<close> assms part_bipart_of_cover_matching partitioned_bipartite_def reachble_bipartite)
 
     then  show "\<exists>M. perfect_matching E M"
       by (smt (verit) \<open>cover_matching E M A\<close> cover_matching_def perfect_matching_def)

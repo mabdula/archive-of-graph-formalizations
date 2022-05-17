@@ -1,5 +1,5 @@
 theory Tutte_matrix
-  imports "HOL-Algebra.Cycles" "HOL-Analysis.Determinants" Tutte_theorem3
+  imports "HOL-Combinatorics.Cycles" "HOL-Analysis.Determinants" Tutte_theorem3
     "HOL-Library.Poly_Mapping"
 begin
 
@@ -213,8 +213,8 @@ qed
 
 lemma tutte_skew_symmetric:
   shows "tutte_matrix $i$j = - tutte_matrix $j$i"
-  by (metis (no_types, hide_lams) add.inverse_inverse add.inverse_neutral in_oriented 
-      insert_commute not_in_edges_tutte_zero one_direction_in_oriented rev_in_oriented)
+  by (metis (no_types, lifting) add.inverse_neutral in_oriented insert_commute
+      not_in_edges_tutte_zero one_direction_in_oriented rev_in_oriented verit_minus_simplify(4))
 
 lemma zero_then_not_in_edges:
   assumes "tutte_matrix $i$j = 0"

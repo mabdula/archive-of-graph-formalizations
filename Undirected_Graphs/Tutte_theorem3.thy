@@ -235,11 +235,14 @@ proof(rule ccontr)
       proof(safe)
         fix e x y
         assume assms_edge: "e \<in> M" " x \<in> e" "x \<notin> C" "y \<in> e" "y \<in> C" 
-        then have "e \<inter> X = {}" 
-          using Diff_disjoint \<open>C \<in> ?QX\<close> \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> \<open>?comp_out C = {}\<close> 
-             diff_odd_components_not_in_X 
-          by (smt (verit, ccfv_threshold) disjoint_iff_not_equal insert_commute insert_iff mem_Collect_eq singletonD subset_eq)
-        then have "e \<in> (graph_diff E X)" 
+        have "e = {x, y}" 
+            using \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> assms_edge(1) assms_edge(2) assms_edge(3) assms_edge(4) assms_edge(5) insert_eq_iff by auto
+
+       then have "e \<inter> X = {}" 
+         using \<open>C \<in> diff_odd_components E X\<close> \<open>{e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}\<close>
+            assms_edge(1) assms_edge(5) diff_odd_components_not_in_X by blast
+
+       then have "e \<in> (graph_diff E X)" 
           using \<open>M \<subseteq> E\<close> \<open>e \<in> M\<close> by blast
         then have "x \<in> C" 
           by (smt (verit, ccfv_SIG) \<open>C \<in> ?QX\<close> \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> assms_edge
@@ -1361,7 +1364,7 @@ proof(induction "card (Vs E)" arbitrary: E rule: less_induct)
               have "(card C') \<noteq> 1" 
                 using \<open>C' \<in> connected_components (graph_diff E (X \<union> {v}))\<close> \<open>C' \<subseteq> C - {v}\<close> \<open>\<forall>C'\<in>connected_components (graph_diff E (X \<union> {v})). \<not> C' \<subseteq> C - {v} \<or> even (card C')\<close> by fastforce
               then have "(\<exists>x y. {x, y} \<subseteq> C' \<and> x \<noteq> y)" 
-                by (metis (no_types, hide_lams) \<open>C' \<in> connected_components (graph_diff E (X \<union> {v}))\<close> \<open>\<forall>C'\<in>connected_components (graph_diff E (X \<union> {v})). C' \<subseteq> C - {v} \<longrightarrow> (\<exists>x y. {x, y} \<subseteq> C')\<close> bot.extremum insert_subset insert_subsetI is_singletonI is_singleton_altdef order_class.order.eq_iff subsetI) 
+                by (metis \<open>C' \<in> connected_components (graph_diff E (X \<union> {v}))\<close> connected_comp_nempty empty_subsetI insert_subset is_singletonI' is_singleton_altdef)
               then obtain x y where "{x, y} \<subseteq> C' \<and> x \<noteq> y" by auto
               then have "y \<in> connected_component (graph_diff E (X \<union> {v})) x" 
                 by (metis \<open>C' \<in> connected_components (graph_diff E (X \<union> {v}))\<close> connected_components_closed' insert_subset)
