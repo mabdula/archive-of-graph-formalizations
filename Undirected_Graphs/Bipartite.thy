@@ -23,22 +23,15 @@ definition cover_matching where
 definition reachable where
   "reachable E X  \<equiv> {v. \<exists> u \<in> X. \<exists> e \<in> E. v \<noteq> u \<and> u \<in> e \<and> v\<in> e}"
 
-(*
-definition other_vertex where
-  "other_vertex M x \<equiv> { v . (\<exists> e\<in>M. x\<in> e \<and> v\<in>e \<and> x \<noteq> v)}"
-*)
-
 lemma perfect_matching_member[iff?]: "perfect_matching E M \<longleftrightarrow>
   graph_invar E \<and> matching M \<and> M \<subseteq> E \<and> Vs M = Vs E"
   unfolding perfect_matching_def by simp
-
 
 lemma perfect_matchingE:
   assumes "perfect_matching E M"
   shows "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
   using assms 
   by(auto simp: perfect_matching_member)
-
 
 lemma perfect_matchingI:
   assumes "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
@@ -57,18 +50,6 @@ lemma reachable_is_union:
 proof -
   show ?thesis unfolding reachable_def by blast
 qed
-
-(*
-lemma reach_singleton:
-  "reachable E {x} = other_vertex E x"
-  unfolding reachable_def other_vertex_def by auto
-
-
-lemma reachable_other_vertex:
-  shows "reachable E X = \<Union>  {r. \<exists> x\<in>X. r = other_vertex E x}"
-  using reach_singleton reachable_is_union 
-  by (smt (verit, best) Collect_cong)
-*)
 
 lemma reachable_subset:
   assumes "A \<subseteq> X"
