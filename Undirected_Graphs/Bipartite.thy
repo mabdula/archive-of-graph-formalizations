@@ -28,10 +28,13 @@ lemma perfect_matching_member[iff?]: "perfect_matching E M \<longleftrightarrow>
   unfolding perfect_matching_def by simp
 
 lemma perfect_matchingE:
-  assumes "perfect_matching E M"
-  shows "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
-  using assms 
-  by(auto simp: perfect_matching_member)
+ "perfect_matching E M \<Longrightarrow>
+   (\<lbrakk>graph_invar E; 
+     matching M;
+     M \<subseteq> E; 
+     Vs M = Vs E\<rbrakk> \<Longrightarrow> R)
+   \<Longrightarrow> R"
+   by(auto simp: perfect_matching_member)
 
 lemma perfect_matchingI:
   assumes "graph_invar E" "matching M" "M \<subseteq> E" "Vs M = Vs E"
