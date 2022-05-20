@@ -3,7 +3,7 @@ theory Odd_components
 begin
 
 definition odd_component where
- "odd_component E C = (\<exists> v \<in> Vs E. connected_component E v = C \<and> odd (card C))"
+  "odd_component E C = (\<exists> v \<in> Vs E. connected_component E v = C \<and> odd (card C))"
 
 definition odd_components where
   "odd_components E = {C. odd_component E C}"
@@ -34,7 +34,7 @@ lemma graph_diff_member[iff?]: "e \<in> graph_diff E X \<longleftrightarrow>
   unfolding graph_diff_def by simp
 
 lemma graph_diffE:
- "e \<in> graph_diff E X \<Longrightarrow>
+  "e \<in> graph_diff E X \<Longrightarrow>
    (\<lbrakk>e \<in> E \<and> e \<inter> X = {}\<rbrakk> \<Longrightarrow> R)
    \<Longrightarrow> R"
   by (simp add: graph_diff_member)
@@ -229,7 +229,7 @@ lemma odd_components_nonempty:
   using assms 
   apply (elim odd_comps_in_diffE odd_componentsE singl_in_diffE)
   unfolding odd_component_def
-  apply (simp add: odd_card_imp_not_empty)
+   apply (simp add: odd_card_imp_not_empty)
   by blast
 
 lemma odd_component_in_E:
@@ -318,8 +318,8 @@ lemma odd_comps_in_diff_are_components:
 lemma odd_comps_in_diff_are_componentsOb:
   assumes "C \<in> odd_comps_in_diff E X"
   obtains v where "v\<in>Vs E-X" 
-                  "connected_component (graph_diff E X) v = C"
-                  "odd (card C)"
+    "connected_component (graph_diff E X) v = C"
+    "odd (card C)"
   using odd_comps_in_diff_are_components[of E X] 
   using assms by fastforce
 
@@ -328,11 +328,11 @@ lemma odd_comps_in_diff_are_componentsI:
   assumes "v\<in>Vs E-X"
   assumes "connected_component (graph_diff E X) v = C"
   shows "C \<in> odd_comps_in_diff E X"
- using odd_comps_in_diff_are_components[of E X] 
+  using odd_comps_in_diff_are_components[of E X] 
   using assms by fastforce
 
 lemma odd_comps_in_diff_are_componentsI2:
-   assumes "odd (card C)"
+  assumes "odd (card C)"
   assumes "C \<in> connected_components (graph_diff E X)"
   shows "C \<in> odd_comps_in_diff E X"
   by (metis assms(1) assms(2) connected_comp_has_vert odd_componentI
@@ -530,7 +530,7 @@ proof -
     by (meson e that) 
 qed  
 
-lemma defvd:
+lemma path_in_comp_edges:
   assumes "graph_invar E"
   assumes "path E p"
   assumes "C \<in> connected_components E"
@@ -587,42 +587,32 @@ proof -
     by (meson assms(3) perfect_matching_def)
   then have "graph_invar (\<Union>A)" using graph_invar_union 
     by (simp add: graph_invar_union \<open>\<forall>a\<in>A. graph_invar a\<close> assms(1))
-
   have "\<forall>a \<in> A. finite (Vs a)" 
     by (simp add: \<open>\<forall>a\<in>A. graph_invar a\<close>)
-
   have disjoint_edges:"\<forall>a1 \<in>A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}" 
     by (metis \<open>\<forall>a\<in>A. graph_invar a\<close> assms(2) disjoint_iff_not_equal edges_are_Vs)
-
 
   let ?f = "(\<lambda>a. {{M. perfect_matching a M}})"
   have "?Ms = (\<Union>a\<in>A. ?f a)" by blast
 
-  then have "finite ?Ms" using assms(1)
-    by simp
+  then have "finite ?Ms" 
+    using assms(1) by simp
   have "\<forall>a \<in> A. {M. perfect_matching a M} \<subseteq> {a1. a1 \<subseteq> a}" 
     by (simp add: Collect_mono perfect_matching_def)
-
   then have "\<forall>a \<in> A. finite {M. perfect_matching a M}"
     by (metis Vs_def \<open>\<forall>a\<in>A. finite (Vs a)\<close> finite_Collect_subsets finite_UnionD finite_subset)
   then have "finite (Vs ?Ms)"
     by (smt (verit) Vs_def \<open>finite ?Ms\<close> finite_Union mem_Collect_eq)
-
   have "\<forall>a1 \<in> A.\<forall>a2\<in>A. a1 \<noteq> a2 \<longrightarrow>
      {M. perfect_matching a1 M} \<inter> {M. perfect_matching a2 M} = {}" 
-    apply safe 
-     apply (metis UnionI Vs_subset \<open>graph_invar (\<Union> A)\<close> assms(2) edges_are_Vs empty_iff 
-        le_iff_inf perfect_matchingE)
-    by (metis UnionI Vs_subset \<open>graph_invar (\<Union> A)\<close> assms(2) edges_are_Vs empty_iff le_iff_inf 
-        perfect_matchingE)
-
+    by (safe; metis Vs_subset assms(2) edges_are_Vs empty_iff le_iff_inf perfect_matchingE)+
   then have matchings_are_diff: "\<forall>a1 \<in> ?Ms.\<forall>a2\<in>?Ms. a1 \<noteq> a2 \<longrightarrow> a1 \<inter> a2 = {}" 
     by force
   have "\<forall>a\<in> ?Ms. \<exists>b\<in> Vs ?Ms. b \<in> a" 
     by (smt (z3) assms(3) mem_Collect_eq vs_member_intro)
   then obtain C where C_sub_Ms:"C\<subseteq> Vs ?Ms \<and> (\<forall>Ms\<in> ?Ms. \<exists>!M\<in>C. M \<in> Ms)"
     using ex_subset_same_elem_card[of ?Ms] matchings_are_diff \<open>finite (Vs ?Ms)\<close> \<open>finite ?Ms\<close> by presburger
-  have "\<forall>c \<in>C. matching c"
+  have "\<forall>c \<in> C. matching c"
   proof
     fix c
     assume "c \<in> C"
@@ -633,7 +623,8 @@ proof -
       using perfect_matching_def by blast
   qed
 
-  have "matching (\<Union>C)" unfolding matching_def
+  have "matching (\<Union>C)" 
+    unfolding matching_def
   proof(safe)
     fix e1 X e2 Xa x xa
     {
@@ -643,32 +634,32 @@ proof -
       proof(cases "Xa = X")
         case True
         then show ?thesis using assums
-          by (metis \<open>\<forall>c\<in>C. matching c\<close>  matching_unique_match)
+          by (metis \<open>\<forall>c\<in>C. matching c\<close> matching_unique_match)
       next
         case False
         have "Xa \<in> Vs ?Ms" 
           using C_sub_Ms \<open>Xa \<in> C\<close> by blast
-        then obtain a1 where a1_match:"a1\<in>A \<and> perfect_matching a1 Xa"
+        then obtain a1 where a1_match:"a1 \<in> A \<and> perfect_matching a1 Xa"
           by (smt (verit) mem_Collect_eq vs_member)
         have "X \<in> Vs ?Ms" 
           using C_sub_Ms \<open>X \<in> C\<close> by blast
-        then obtain a2 where a2_match:"a2\<in>A \<and> perfect_matching a2 X"
+        then obtain a2 where a2_match:"a2 \<in> A \<and> perfect_matching a2 X"
           by (smt (verit) mem_Collect_eq vs_member)
         have "a1 \<noteq> a2" 
           using C_sub_Ms False \<open>X \<in> C\<close> \<open>Xa \<in> C\<close> a1_match a2_match by auto
         then have "a1 \<inter> a2 = {}" 
           by (simp add: a1_match a2_match disjoint_edges)
 
-        then show ?thesis using assums 
-          by (metis (full_types) IntI UnionI Vs_def \<open>a1 \<noteq> a2\<close> a1_match a2_match assms(2) perfect_matching_def)
-        
+        then show ?thesis 
+          using assums a1_match a2_match
+          unfolding perfect_matching_def 
+          by (metis (full_types) IntI UnionI Vs_def \<open>a1 \<noteq> a2\<close> assms(2))
       qed
     }
     then show "e1 \<in> X \<Longrightarrow> X \<in> C \<Longrightarrow> e2 \<in> Xa \<Longrightarrow> Xa \<in> C \<Longrightarrow> x \<in> e2 \<Longrightarrow>
        x \<notin> e1 \<Longrightarrow> xa \<in> e1 \<Longrightarrow> xa \<in> e2 \<Longrightarrow> xa \<in> {}"
       by blast
   qed   
-
   have "\<Union>C \<subseteq> \<Union>A"
   proof
     fix x
@@ -717,24 +708,24 @@ proof(safe)
       by (smt (verit, best) component_edges_def mem_Collect_eq)
     then show "x \<in> C"
       by (meson \<open>x \<in> e \<and> e \<in> component_edges A C\<close> subsetD)
-    }
-    fix x
-    assume "x \<in> C"
-    then have "x \<in> Vs A" 
-      by (meson assms connected_comp_verts_in_verts)
-    then obtain e where "x \<in> e \<and> e \<in> A" 
-      by (meson vs_member_elim)
-    then obtain y where "e = {x, y}" 
-      using assms(1) by fastforce
-    then have "y \<in> C" 
-      by (smt (verit) \<open>x \<in> C\<close> \<open>x \<in> Vs A\<close> \<open>x \<in> e \<and> e \<in> A\<close> assms edge_in_component insertCI own_connected_component_unique subset_iff)
-    then have "e \<subseteq> C" 
-      by (simp add: \<open>e = {x, y}\<close> \<open>x \<in> C\<close>)
-    then have "e \<in> (component_edges A C)" 
-      by (simp add: \<open>x \<in> e \<and> e \<in> A\<close> assms(1) edge_in_component_edges)
-    then show "x \<in> Vs (component_edges A C)" 
-      using \<open>x \<in> e \<and> e \<in> A\<close> by blast
-  qed
+  }
+  fix x
+  assume "x \<in> C"
+  then have "x \<in> Vs A" 
+    by (meson assms connected_comp_verts_in_verts)
+  then obtain e where "x \<in> e \<and> e \<in> A" 
+    by (meson vs_member_elim)
+  then obtain y where "e = {x, y}" 
+    using assms(1) by fastforce
+  then have "y \<in> C" 
+    by (metis \<open>x \<in> C\<close> \<open>x \<in> e \<and> e \<in> A\<close> assms(2) edges_are_walks in_con_compI)
+  then have "e \<subseteq> C" 
+    by (simp add: \<open>e = {x, y}\<close> \<open>x \<in> C\<close>)
+  then have "e \<in> (component_edges A C)" 
+    by (simp add: \<open>x \<in> e \<and> e \<in> A\<close> assms(1) edge_in_component_edges)
+  then show "x \<in> Vs (component_edges A C)" 
+    using \<open>x \<in> e \<and> e \<in> A\<close> by blast
+qed
 
 lemma components_edges_all:
   assumes "graph_invar A"
@@ -751,7 +742,7 @@ proof(safe)
     then show "e \<in> \<Union> (components_edges A)" 
       by (simp add: \<open>e \<in> A\<close> assms graph_component_edges_partition)
   }
- 
+
   fix e C'
   assume "C' \<in> (components_edges A)" "e \<in> C'"
   then show "e \<in> A"  
@@ -780,30 +771,25 @@ proof -
     show "\<forall>a2\<in>?E. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}" 
     proof
       fix a2
-       assume "a2 \<in> ?E"
-    then obtain C2 where "C2 \<in> connected_components A \<and> a2 = component_edges A C2"
-      by (smt (verit) components_edges_def mem_Collect_eq)
-    then have "Vs a2 = C2" 
-      by (simp add: assms(1) vs_connected_component)
-    have "C1 \<noteq> C2 \<longrightarrow> C1 \<inter> C2 = {}" 
-      by (meson \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> connected_components_disj)
+      assume "a2 \<in> ?E"
+      then obtain C2 where "C2 \<in> connected_components A \<and> a2 = component_edges A C2"
+        by (smt (verit) components_edges_def mem_Collect_eq)
+      then have "Vs a2 = C2" 
+        by (simp add: assms(1) vs_connected_component)
+      have "C1 \<noteq> C2 \<longrightarrow> C1 \<inter> C2 = {}" 
+        by (meson \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> connected_components_disj)
 
-   then show "a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}" 
-     using \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> \<open>Vs a1 = C1\<close> \<open>Vs a2 = C2\<close> 
-     
-     by force
+      then show "a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}" 
+        using \<open>C1 \<in> connected_components A \<and> a1 = component_edges A C1\<close> \<open>C2 \<in> connected_components A \<and> a2 = component_edges A C2\<close> \<open>Vs a1 = C1\<close> \<open>Vs a2 = C2\<close> 
+
+        by force
+    qed
   qed
-qed
   have "A = \<Union>?E" using assms(1) components_edges_all by blast  
   then show "\<exists>M. perfect_matching A M" using perfect_matching_union[of ?E] 
     using `finite ?E` ` \<forall>a1\<in>?E. \<forall>a2\<in>?E. a1 \<noteq> a2 \<longrightarrow> Vs a1 \<inter> Vs a2 = {}` 
-   `\<forall>a \<in> ?E. \<exists>M. perfect_matching a M` by auto
+      `\<forall>a \<in> ?E. \<exists>M. perfect_matching a M` by auto
 qed
-
-lemma odd_components_subset_vertices:
-  assumes "C \<in> (odd_comps_in_diff E X)"
-  shows "C \<subseteq> Vs E"
-   by (meson assms component_in_E)
 
 lemma graph_diff_empty:
   shows "E = graph_diff E {}" 
@@ -816,13 +802,13 @@ lemma vertices_edges_in_same_component:
 
 lemma graph_diff_of_empty: 
   "graph_diff {} X = {}"
-using graph_diff_subset by auto
+  using graph_diff_subset by auto
 
 lemma empty_graph_odd_components:
   shows "odd_comps_in_diff {} X = {}" 
   unfolding odd_comps_in_diff_def
   apply safe
-  apply(elim odd_componentsE odd_componentE )
+   apply(elim odd_componentsE odd_componentE )
    apply (metis empty_iff graph_diff_of_empty vs_member_elim)
   apply(elim singl_in_diffE)
   by (simp add: graph_diff_of_empty)
@@ -853,7 +839,7 @@ lemma add_subset_change_odd_components:
   assumes "Y \<noteq> {}"
   shows "odd_comps_in_diff E (X\<union>Y) = ((odd_comps_in_diff E X) - {C}) \<union>
     odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
-proof(cases "C\<in> singl_in_diff E X")
+proof(cases "C \<in> singl_in_diff E X")
   case True
   then have "C = Y" unfolding singl_in_diff_def
     using assms(5) assms(4) by blast
@@ -864,9 +850,9 @@ proof(cases "C\<in> singl_in_diff E X")
     by (simp add: \<open>C = Y\<close>)
 
   then have "(graph_diff E X) = (graph_diff E (X\<union>{x}))" 
- using `x \<notin> Vs (graph_diff E X)`
+    using `x \<notin> Vs (graph_diff E X)`
     unfolding graph_diff_def   
-     by blast 
+    by blast 
 
   then have "(odd_components (graph_diff E X)) = (odd_components (graph_diff E (X\<union>{x})))"
     by auto
@@ -881,8 +867,8 @@ proof(cases "C\<in> singl_in_diff E X")
   then have "odd_comps_in_diff E (X\<union>{x}) = ((odd_comps_in_diff E X) - {{x}})"
     unfolding odd_comps_in_diff_def 
     by (simp add: Un_Diff \<open>graph_diff E X = graph_diff E (X \<union> {x})\<close> 
-                          \<open>singl_in_diff E X - {{x}} = singl_in_diff E (X \<union> {x})\<close>)
- 
+        \<open>singl_in_diff E X - {{x}} = singl_in_diff E (X \<union> {x})\<close>)
+
 
   have "(component_edges (graph_diff E X) C) = {}" 
     by (smt (verit, best) assms(1) component_edges_singleton_is_empty graph_invar_diff singl_x(1))
@@ -895,227 +881,215 @@ next
   case False
   then have "C \<in> odd_components (graph_diff E X)" 
     by (meson assms(3) odd_comps_in_diffE)
+  then have odd_C: "odd_component (graph_diff E X) C" 
+    using odd_componentsE by blast
   show "odd_comps_in_diff E (X\<union>Y) = ((odd_comps_in_diff E X) - {C}) \<union>
     odd_comps_in_diff (component_edges (graph_diff E X) C) Y" 
-  proof
+  proof 
     show " odd_comps_in_diff E (X \<union> Y) \<subseteq> odd_comps_in_diff E X - {C} \<union>
        odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
     proof
       fix C'
-      assume "C' \<in> odd_comps_in_diff E (X \<union> Y)"
+      assume asmC':"C' \<in> odd_comps_in_diff E (X \<union> Y)"
       then have "C' \<noteq> {}" 
         using odd_components_nonempty by blast
       then obtain c where "c \<in> C'" by auto
-      then have "connected_component (graph_diff E (X \<union> Y)) c = C'"
+      then have conn_compC':"connected_component (graph_diff E (X \<union> Y)) c = C'"
         using odd_comps_in_diff_is_component 
-        by (metis \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close>)
+        by (metis asmC')
 
       show "C' \<in> odd_comps_in_diff E X - {C} \<union>
               odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
       proof(cases "c \<in> C")
         case True
-        then have "connected_component (graph_diff E X) c = C" 
+        then have conn_compC: "connected_component (graph_diff E X) c = C" 
           by (meson assms(3) odd_comps_in_diff_is_component)
         then have "c \<in> Vs (graph_diff E X)" 
           using True \<open>C \<in> odd_components (graph_diff E X)\<close> odd_components_elem_in_E by auto
-     
-        then obtain e where "e\<in>(graph_diff E X)" "c \<in> e"  by (meson vs_member_elim)
-        then have "e \<subseteq> C" using edge_subset_component[of "(graph_diff E X)" e c]
-          by (metis \<open>connected_component (graph_diff E X) c = C\<close> assms(1) graph_invar_diff)
-    
-          have "C' = connected_component (graph_diff E (X\<union> Y)) c" 
-            by (simp add: \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
 
-          have "connected_component (graph_diff E (X\<union> Y)) c = 
+        then obtain e where e: "e \<in> (graph_diff E X)" "c \<in> e"  
+          by (meson vs_member_elim)
+        then have "e \<subseteq> C"
+          using edge_subset_component[of "(graph_diff E X)" e c]
+          by (metis conn_compC assms(1) graph_invar_diff)
+        have "C' = connected_component (graph_diff E (X\<union> Y)) c" 
+          by (simp add: conn_compC')
+
+        have "connected_component (graph_diff E (X \<union> Y)) c = 
       connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
-          proof(safe)
-            {
-              fix x
-              assume "x \<in> connected_component (graph_diff E (X\<union> Y)) c"
-              show "x \<in>  connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
-              proof(cases "x = c")
-                case True
-                then show ?thesis 
-                  by (simp add: in_own_connected_component)
-              next
-                case False
-                then have "(\<exists>p. walk_betw (graph_diff E (X\<union> Y)) x p c)"
-                  unfolding connected_component_def 
-                  by (metis \<open>x \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> connected_components_member_sym in_con_comp_has_walk)
-                then obtain p where p_walk:"walk_betw (graph_diff E (X\<union> Y)) x p c" by auto
-                then have "last p = c" 
-                  by fastforce
-               
-                then have "path (graph_diff E (X\<union> Y)) p" using p_walk unfolding walk_betw_def  by auto
-                then have "\<forall>z \<in> set p.  z \<in> C \<and>
-       z \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
-                  using `last p = c`
-                 proof(induct p)
-                   case path0
-                   then show ?case 
-                     by auto
-                 next
-                   case (path1 v)
-                   then show ?case 
-                     by (metis True  empty_iff empty_set in_own_connected_component last_ConsL set_ConsD)
-                 next
-                   case (path2 v v' vs)
-                   have "v' \<in> C" 
-                     by (metis last_ConsR list.set_intros(1) list.simps(3) path2.hyps(3) path2.prems)
-            
-                 
-                 have "{v, v'} \<inter> (X\<union>Y) = {}" 
-                       by (meson graph_diffE path2.hyps(1))
-                  then have "{v, v'} \<inter> X = {}" 
-                    by (simp add: Int_Un_distrib)
-                  then have "{v, v'} \<in> (graph_diff E (X))"   
-                    by (meson graph_diffE graph_diffI path2.hyps(1))
-                    then have "v \<in> C" 
-                      by (metis \<open>connected_component (graph_diff E X) c = C\<close> \<open>v' \<in> C\<close> 
-                          connected_components_member_eq insert_commute 
-                          vertices_edges_in_same_component)
-                    then have "{v, v'} \<in> (component_edges (graph_diff E X) C)"
-                      using \<open>v' \<in> C\<close> \<open>{v, v'} \<in> graph_diff E X\<close> component_edges_def by blast     
-                    then have "{v, v'} \<in> (graph_diff (component_edges (graph_diff E X) C) Y)"
-                      using \<open>{v, v'} \<inter> (X \<union> Y) = {}\<close> 
-                      by (simp add: graph_diffI)       
-                    then have "v' \<in> connected_component 
-                                (graph_diff (component_edges (graph_diff E X) C) Y) c" 
-                      by (metis last_ConsR list.set_intros(1) list.simps(3) path2.hyps(3) 
-                          path2.prems)
-                     then have "v \<in> connected_component 
-                                (graph_diff (component_edges (graph_diff E X) C) Y) c"
-                       by (metis \<open>{v, v'} \<in> graph_diff (component_edges (graph_diff E X) C) Y\<close> 
-                           connected_components_member_eq insert_commute 
-                           vertices_edges_in_same_component)
-                  then show ?case 
-                    by (metis \<open>v \<in> C\<close> last_ConsR list.simps(3) path2.hyps(3) path2.prems set_ConsD)
-                qed
-
-               
-                then show "x \<in> connected_component 
-                          (graph_diff (component_edges (graph_diff E X) C) Y) c"
-                  by (metis list.set_sel(1) p_walk walk_betw_def)
-              qed
-            }
+        proof(safe)
+          {
             fix x
-            assume "x \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c" 
-            show " x \<in> connected_component (graph_diff E (X \<union> Y)) c"
+            assume asm:"x \<in> connected_component (graph_diff E (X\<union> Y)) c"
+            show "x \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
             proof(cases "x = c")
               case True
               then show ?thesis 
                 by (simp add: in_own_connected_component)
             next
               case False
-              then have "(\<exists>p. walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c)"
+              then have "(\<exists>p. walk_betw (graph_diff E (X\<union> Y)) x p c)"
                 unfolding connected_component_def 
-                by (metis \<open>x \<in> connected_component  (graph_diff (component_edges (graph_diff E X) C) Y) c\<close> connected_components_member_sym in_con_comp_has_walk)
-              then obtain p where p_walk:"walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c" by auto
+                by (metis asm connected_components_member_sym in_con_comp_has_walk)
+              then obtain p where p_walk:"walk_betw (graph_diff E (X\<union> Y)) x p c" 
+                by auto
               then have "last p = c" 
                 by fastforce
-              then have "path  (graph_diff (component_edges (graph_diff E X) C) Y) p" using p_walk unfolding walk_betw_def  by auto
-
-              then have "\<forall>z \<in> set p. z \<in> connected_component (graph_diff E (X \<union> Y)) c"
+              then have "path (graph_diff E (X\<union> Y)) p" 
+                using p_walk unfolding walk_betw_def  by auto
+              then have "\<forall>z \<in> set p.  z \<in> C \<and>
+                   z \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
                 using `last p = c`
-              proof(induct p) 
+              proof(induct p)
                 case path0
                 then show ?case 
                   by auto
               next
                 case (path1 v)
                 then show ?case 
-                  using \<open>C' = connected_component (graph_diff E (X \<union> Y)) c\<close> \<open>c \<in> C'\<close> by auto
-
+                  by (simp add: True in_own_connected_component)
               next
                 case (path2 v v' vs)
-                have "last (v' # vs) = c" 
-                  using path2.prems 
-                  by auto
-                have "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c" 
-                  using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
-                have "{v, v'} \<in> (graph_diff (component_edges (graph_diff E X) C) Y)" 
-                  by (simp add: path2.hyps(1))
-                then have "{v, v'} \<inter> Y = {}" unfolding graph_diff_def 
-                  by fastforce
-                have "{v, v'} \<in>  (component_edges (graph_diff E X) C)" 
-                  using graph_diff_subset path2.hyps(1) by blast
-                then have "{v, v'} \<in> (graph_diff E X)" 
-                  using component_edges_subset 
-                  using Berge.component_edges_subset insert_Diff insert_subset by blast
-                then have "{v, v'} \<inter> X = {}" unfolding graph_diff_def  
-                  by fastforce
-                then have "{v, v'} \<in> (graph_diff E (X\<union>Y))" unfolding graph_diff_def 
-                  using `{v, v'} \<inter> Y = {}` 
-                  using \<open>{v, v'} \<in> graph_diff E X\<close> graph_diff_def by fastforce
-
-                then have "v' \<in> connected_component (graph_diff E (X\<union>Y)) c" 
-
-                  by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close>)
-                then have "v \<in>  connected_component (graph_diff E (X\<union>Y)) c"
-
-                  by (metis \<open>{v, v'} \<in> graph_diff E (X \<union> Y)\<close> connected_components_member_eq connected_components_member_sym vertices_edges_in_same_component)
-
-
-
-
+                have "v' \<in> C" 
+                  by (metis last_ConsR list.set_intros(1) 
+                      list.simps(3) path2.hyps(3) path2.prems)
+                have "{v, v'} \<inter> (X\<union>Y) = {}" 
+                  by (meson graph_diffE path2.hyps(1))
+                then have "{v, v'} \<inter> X = {}" 
+                  by (simp add: Int_Un_distrib)
+                then have "{v, v'} \<in> (graph_diff E (X))"   
+                  by (meson graph_diffE graph_diffI path2.hyps(1))
+                then have "v \<in> C" 
+                  by (metis \<open>v' \<in> C\<close> conn_compC connected_components_member_eq insert_commute 
+                      vertices_edges_in_same_component)
+                then have "{v, v'} \<in> (component_edges (graph_diff E X) C)"
+                  using \<open>v' \<in> C\<close> \<open>{v, v'} \<in> graph_diff E X\<close> component_edges_def by blast     
+                then have "{v, v'} \<in> (graph_diff (component_edges (graph_diff E X) C) Y)"
+                  using \<open>{v, v'} \<inter> (X \<union> Y) = {}\<close> 
+                  by (simp add: graph_diffI)       
+                then have "v' \<in> connected_component 
+                                (graph_diff (component_edges (graph_diff E X) C) Y) c" 
+                  by (metis last_ConsR list.set_intros(1) list.simps(3) path2.hyps(3) 
+                      path2.prems)
+                then have "v \<in> connected_component 
+                                (graph_diff (component_edges (graph_diff E X) C) Y) c"
+                  by (metis \<open>{v, v'} \<in> graph_diff (component_edges (graph_diff E X) C) Y\<close> 
+                      connected_components_member_eq insert_commute 
+                      vertices_edges_in_same_component)
                 then show ?case 
-                  using \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> by fastforce
-              qed 
-              then show ?thesis 
+                  by (metis \<open>v \<in> C\<close> last_ConsR list.simps(3) path2.hyps(3) path2.prems set_ConsD)
+              qed
+              then show "x \<in> connected_component 
+                          (graph_diff (component_edges (graph_diff E X) C) Y) c"
                 by (metis list.set_sel(1) p_walk walk_betw_def)
             qed
+          }
+          fix x
+          assume asm:"x \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c" 
+          show " x \<in> connected_component (graph_diff E (X \<union> Y)) c"
+          proof(cases "x = c")
+            case True
+            then show ?thesis 
+              by (simp add: in_own_connected_component)
+          next
+            case False
+            then have "(\<exists>p. walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c)"
+              unfolding connected_component_def 
+              by (metis asm connected_components_member_sym in_con_comp_has_walk)
+            then obtain p where p_walk:
+              "walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c" 
+              by auto
+            then have "last p = c" 
+              by fastforce
+            then have "path  (graph_diff (component_edges (graph_diff E X) C) Y) p" 
+              using p_walk unfolding walk_betw_def  by auto
+            then have "\<forall>z \<in> set p. z \<in> connected_component (graph_diff E (X \<union> Y)) c"
+              using `last p = c`
+            proof(induct p) 
+              case path0
+              then show ?case 
+                by auto
+            next
+              case (path1 v)
+              then show ?case 
+                using \<open>C' = connected_component (graph_diff E (X \<union> Y)) c\<close> \<open>c \<in> C'\<close> by auto
+
+            next
+              case (path2 v v' vs)
+              have "last (v' # vs) = c" 
+                using path2.prems 
+                by auto
+              have in_c: "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c" 
+                using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
+              have "{v, v'} \<in> (graph_diff (component_edges (graph_diff E X) C) Y)" 
+                by (simp add: path2.hyps(1))
+              then have "{v, v'} \<inter> Y = {}" 
+                unfolding graph_diff_def 
+                by fastforce
+              have "{v, v'} \<in>  (component_edges (graph_diff E X) C)" 
+                using graph_diff_subset path2.hyps(1) by blast
+              then have "{v, v'} \<in> (graph_diff E X)" 
+                using component_edges_subset 
+                using Berge.component_edges_subset insert_Diff insert_subset by blast
+              then have "{v, v'} \<inter> X = {}"
+                unfolding graph_diff_def  
+                by fastforce
+              then have "{v, v'} \<in> (graph_diff E (X\<union>Y))"
+                unfolding graph_diff_def 
+                using `{v, v'} \<inter> Y = {}` \<open>{v, v'} \<in> graph_diff E X\<close> graph_diff_def by fastforce
+              then have "v' \<in> connected_component (graph_diff E (X\<union>Y)) c" 
+                by (simp add: in_c)
+              then have "v \<in> connected_component (graph_diff E (X\<union>Y)) c"
+                by (metis \<open>{v, v'} \<in> graph_diff E (X \<union> Y)\<close> connected_components_member_eq 
+                    connected_components_member_sym vertices_edges_in_same_component)
+              then show ?case 
+                using in_c by fastforce
+            qed 
+            then show ?thesis 
+              by (metis list.set_sel(1) p_walk walk_betw_def)
           qed
-          then have " connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'"
-
-            by (simp add: \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
-        
-          have "odd (card C')" 
-            using \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> diff_odd_compoenent_has_odd_card by auto
-
-          have "c \<in> Vs (component_edges (graph_diff E X) C)" 
-            
-            by (smt (verit, best) \<open>c \<in> e\<close> \<open>e \<in> graph_diff E X\<close> \<open>e \<subseteq> C\<close> assms(1) edge_in_component_edges graph_invar_diff vs_member)
-          have "c \<notin> Y" 
-            by (smt (verit, ccfv_SIG) Un_subset_iff \<open>C' = connected_component (graph_diff E (X \<union> Y)) c\<close> \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> assms(1) assms(2) assms(3) assms(4) connected_components_notE_singletons diff_disjoint_elements(2) odd_comps_in_diff_not_in_X dual_order.trans insert_Diff insert_disjoint(2) odd_components_subset_vertices subsetD sup.cobounded2)
-          then have "c \<in> Vs (component_edges (graph_diff E X) C) - Y" 
-            
-            using \<open>c \<in> Vs (component_edges (graph_diff E X) C)\<close> by blast
-          then have "C' \<in> odd_comps_in_diff
-           (component_edges (graph_diff E X) C) Y" 
-            using \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> 
-                \<open>odd (card C')\<close> 
-            by (meson odd_comps_in_diff_are_componentsI)
-         
-          then show "  C' \<in> odd_comps_in_diff E X - {C} \<union>
-          odd_comps_in_diff
-           (component_edges (graph_diff E X) C) Y" 
-            by (simp add: odd_comps_in_diff_def)
-       next
+        qed
+        then have c_in_diff:
+          "connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'"
+          using conn_compC' by presburger
+        have "odd (card C')" 
+          using asmC' diff_odd_compoenent_has_odd_card by auto
+        have c_in_C: "c \<in> Vs (component_edges (graph_diff E X) C)" 
+          by (smt (verit, ccfv_SIG) \<open>e \<subseteq> C\<close> assms(1) e edge_in_component_edges 
+              graph_invar_diff vs_member)
+        have "c \<notin> Y"
+          by (meson \<open>c \<in> C'\<close> asmC' disjoint_iff_not_equal 
+              odd_comps_in_diff_not_in_X subsetD sup_ge2)
+        then have "c \<in> Vs (component_edges (graph_diff E X) C) - Y" 
+          using c_in_C by blast
+        then have "C' \<in> odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
+          using c_in_diff \<open>odd (card C')\<close>  by (meson odd_comps_in_diff_are_componentsI)
+        then show "C' \<in> odd_comps_in_diff E X - {C} \<union>
+                   odd_comps_in_diff (component_edges (graph_diff E X) C) Y" 
+          by (simp add: odd_comps_in_diff_def)
+      next
         case False
         then  have "c \<notin> C" by auto
         have "connected_component (graph_diff E X) c = connected_component (graph_diff E (X \<union> Y)) c"
-
         proof(safe)
           {
             fix x
-            assume "x \<in> connected_component (graph_diff E X) c"
-            show " x \<in> connected_component
-               (graph_diff E (X \<union> Y)) c"
+            assume asmx:"x \<in> connected_component (graph_diff E X) c"
+            show " x \<in> connected_component (graph_diff E (X \<union> Y)) c"
             proof(cases "x = c")
               case True
-              then show ?thesis 
-                by (simp add: \<open>c \<in> C'\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
+              then show ?thesis
+                by (simp add: in_own_connected_component)
             next
               case False
-
-              then have "(\<exists>p. walk_betw (graph_diff E X) x p c)"
+              then have "\<exists>p. walk_betw (graph_diff E X) x p c"
                 unfolding connected_component_def 
-                by (metis \<open>x \<in> connected_component (graph_diff E X) c\<close> connected_components_member_sym in_con_comp_has_walk)
+                by (metis asmx connected_components_member_sym in_con_comp_has_walk)
               then obtain p where p_walk:"walk_betw (graph_diff E X) x p c" by auto
               then have "last p = c" 
                 by fastforce
-              then have "path (graph_diff E X) p" using p_walk unfolding walk_betw_def  by auto
-
+              then have "path (graph_diff E X) p" 
+                using p_walk unfolding walk_betw_def  by auto
               then have "\<forall>z \<in> set p. z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c"
                 using `last p = c`
               proof(induct p) 
@@ -1132,62 +1106,66 @@ next
                 have "last (v' # vs) = c" 
                   using path2.prems 
                   by auto
-                have "\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c" 
+                have zhyps: "\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> 
+                      z \<in> connected_component (graph_diff E X) c" 
                   using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
                 have "{v, v'} \<in> (graph_diff E X)" 
                   by (simp add: path2.hyps(1))
                 then have "v' \<in> connected_component (graph_diff E X) c" 
-                  by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c\<close>)
+                  by (simp add: zhyps)
                 then have "v \<in> connected_component (graph_diff E X) v'"
-                  by (meson connected_components_member_sym path2.hyps(1) vertices_edges_in_same_component)
+                  by (meson connected_components_member_sym path2.hyps(1) 
+                      vertices_edges_in_same_component)
                 then have "v \<in> connected_component (graph_diff E X) c"
-                  by (meson \<open>v' \<in> connected_component (graph_diff E X) c\<close> connected_components_member_trans)
+                  by (meson \<open>v' \<in> connected_component (graph_diff E X) c\<close> 
+                      connected_components_member_trans)
                 then have "v \<notin> C" 
-                  by (metis \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c\<close> assms(1) assms(3) assms(4) connected_components_member_eq odd_comps_in_diff_is_component list.set_intros(1))
+                  by (metis assms(3) connected_components_member_eq list.set_intros(1)
+                      odd_comps_in_diff_is_component zhyps)
                 then have "v \<notin> Y" 
                   using assms(4) by blast
                 have "v' \<notin> Y" 
-                  by (meson \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c\<close> assms(4) list.set_intros(1) subsetD)
+                  by (meson zhyps assms(4) list.set_intros(1) subsetD)
                 then have "{v, v'} \<inter> (Y) = {}" 
                   by (simp add: \<open>v \<notin> Y\<close>)
-                have "{v, v'} \<inter> X = {}" using `{v, v'} \<in> (graph_diff E X)` unfolding graph_diff_def  
+                have "{v, v'} \<inter> X = {}"
+                  using `{v, v'} \<in> (graph_diff E X)`
+                  unfolding graph_diff_def  
                   by fastforce
                 then have "{v, v'} \<inter> (X\<union>Y) = {}" 
                   by (simp add: Int_Un_distrib \<open>{v, v'} \<inter> Y = {}\<close>)
                 then have "{v, v'} \<in> (graph_diff E (X \<union> Y))" 
                   by (metis (mono_tags, lifting) graph_diff_def mem_Collect_eq path2.hyps(1))
-
                 then have "v \<in> C'" 
-                  by (metis \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close> connected_components_member_eq connected_components_member_sym list.set_intros(1) vertices_edges_in_same_component) 
-
+                  by (metis conn_compC' connected_components_member_trans insert_commute
+                      list.set_intros(1) vertices_edges_in_same_component zhyps)
                 then show ?case 
-                  using \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E X) c\<close> \<open>v \<in> connected_component (graph_diff E X) c\<close> \<open>v \<notin> C\<close> by auto
+                  using \<open>v \<in> connected_component (graph_diff E X) c\<close> \<open>v \<notin> C\<close> zhyps by auto
               qed
-
               then have "x \<in> C' \<and> x \<notin> C \<and> x \<in> connected_component (graph_diff E X) c" 
                 by (metis list.set_sel(1) p_walk walk_betw_def)
               then show " x \<in> connected_component (graph_diff E (X \<union> Y)) c" 
-                by (simp add: \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
+                using conn_compC' by auto
             qed
           }
           fix x
-          assume "x \<in> connected_component (graph_diff E (X \<union> Y)) c"
+          assume asmx:"x \<in> connected_component (graph_diff E (X \<union> Y)) c"
           show " x \<in> connected_component (graph_diff E X) c"
           proof(cases "x = c")
             case True
             then show ?thesis 
               by (simp add: in_own_connected_component)
-
           next
             case False
-            then have "(\<exists>p. walk_betw (graph_diff E (X \<union> Y)) x p c)"
-              unfolding connected_component_def 
-              by (metis \<open>x \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> connected_components_member_sym in_con_comp_has_walk)
-            then obtain p where p_walk:"walk_betw (graph_diff E (X \<union> Y)) x p c" by auto
+            then have "\<exists>p. walk_betw (graph_diff E (X \<union> Y)) x p c"
+              unfolding connected_component_def
+              by (metis asmx connected_components_member_sym in_con_comp_has_walk)
+            then obtain p where p_walk:"walk_betw (graph_diff E (X \<union> Y)) x p c" 
+              by auto
             then have "last p = c" 
               by fastforce
-            then have "path (graph_diff E (X \<union> Y)) p" using p_walk unfolding walk_betw_def  by auto
-
+            then have "path (graph_diff E (X \<union> Y)) p" 
+              using p_walk unfolding walk_betw_def by auto
             then have "\<forall>z \<in> set p. z \<in> connected_component (graph_diff E X) c"
               using `last p = c`
             proof(induct p) 
@@ -1204,161 +1182,153 @@ next
               have "last (v' # vs) = c" 
                 using path2.prems 
                 by auto
-              have "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c" 
+              have zhyps:"\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c" 
                 using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
               have "{v, v'} \<in> (graph_diff E (X \<union> Y))" 
                 by (simp add: path2.hyps(1))
-              then have "{v, v'} \<in> (graph_diff E (X))" unfolding graph_diff_def  
+              then have "{v, v'} \<in> (graph_diff E (X))"
+                unfolding graph_diff_def  
                 by blast
               then have "v' \<in> connected_component (graph_diff E X) c" 
-                by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c\<close>)
-
+                by (simp add: zhyps)
               then show ?case 
-                by (metis \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c\<close> \<open>{v, v'} \<in> graph_diff E X\<close> connected_components_member_eq insert_commute set_ConsD vertices_edges_in_same_component)
+                by (metis zhyps \<open>{v, v'} \<in> graph_diff E X\<close> connected_components_member_eq
+                    insert_commute set_ConsD vertices_edges_in_same_component)
             qed
             then show " x \<in> connected_component (graph_diff E (X)) c" 
               by (metis list.set_sel(1) p_walk walk_betw_def)
           qed
         qed
-        then have "connected_component (graph_diff E X) c = C'" 
-          by (simp add: \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
+        then have conn_compC: "connected_component (graph_diff E X) c = C'" 
+          using conn_compC' by fastforce
         have "C' \<in> odd_comps_in_diff E X"
-        proof(cases "C' \<in> singl_in_diff E (X\<union>Y)")
+        proof(cases "C' \<in> singl_in_diff E (X \<union> Y)")
           case True
           then have "C' = {c}" 
-            by (smt (verit, ccfv_SIG) IntI Un_subset_iff \<open>c \<in> C'\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close> assms(1) assms(3) assms(4) assms(2) component_in_E connected_components_notE_singletons diff_disjoint_elements(1) empty_iff sup.absorb_iff1 vs_member_intro)
+            apply(elim singl_in_diffE)
+            using \<open>c \<in> C'\<close> by fastforce
           have "connected_component (graph_diff E X) c = {c}" 
-            by (simp add: \<open>C' = {c}\<close> \<open>connected_component (graph_diff E X) c = C'\<close>)
-          have " c \<notin> Vs (graph_diff E X)"
+            by (simp add: \<open>C' = {c}\<close> conn_compC)
+          have "c \<notin> Vs (graph_diff E X)"
           proof(rule ccontr)
             assume " \<not> c \<notin> Vs (graph_diff E X)"
             then have "\<exists> e. c \<in> e \<and> e \<in> (graph_diff E X)" 
               by (meson vs_member_elim)
-            then obtain e where "c \<in> e \<and> e \<in> (graph_diff E X)" by auto
+            then obtain e where e: "c \<in> e \<and> e \<in> (graph_diff E X)" 
+              by auto
             then have "e \<subseteq> connected_component (graph_diff E X) c" 
-              by (smt (z3) \<open>connected_component (graph_diff E X) c = {c}\<close> assms(1) graph_diff_subset in_con_comp_insert insertE insert_Diff insert_commute insert_subset singletonD)
+              by (metis assms(1) edge_subset_component graph_invar_diff)
             then show False 
-              by (metis \<open>c \<in> e \<and> e \<in> graph_diff E X\<close> \<open>connected_component (graph_diff E X) c = {c}\<close> assms(1) graph_diff_subset insert_absorb insert_subset singleton_insert_inj_eq')
+              by (metis \<open>C' = {c}\<close> assms(1) conn_compC e graph_diffE insert_commute
+                  singleton_insert_inj_eq')
           qed
-
-          then have "C' \<in> singl_in_diff E X" unfolding singl_in_diff_def
-            using \<open>C' = {c}\<close> \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> component_in_E odd_comps_in_diff_not_in_X 
-            
-            using True by fastforce
-          then show ?thesis unfolding odd_comps_in_diff_def 
+          then have "C' \<in> singl_in_diff E X" 
+            unfolding singl_in_diff_def 
+            using \<open>C' = {c}\<close> asmC' component_in_E odd_comps_in_diff_not_in_X True by fastforce
+          then show ?thesis
+            unfolding odd_comps_in_diff_def 
             by simp
-
-
         next
           case False
           then have "C' \<in> odd_components (graph_diff E (X\<union>Y))" 
-            by (metis UnE \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> odd_comps_in_diff_def)
+            by (metis UnE asmC' odd_comps_in_diff_def)
           then have "odd (card C')" 
             by (simp add: odd_components_def odd_component_def)
           have "c\<in>Vs (graph_diff E X)"
           proof(rule ccontr)
             assume "c \<notin> Vs (graph_diff E X)"
-            have "c \<notin>  Vs (graph_diff E (X\<union>Y))"
+            have c_notin_U:"c \<notin>  Vs (graph_diff E (X\<union>Y))"
             proof(rule ccontr)
               assume " \<not> c \<notin> Vs (graph_diff E (X \<union> Y))"
               then have "\<exists>e. c \<in> e \<and> e \<in> (graph_diff E (X \<union> Y))" 
                 by (meson vs_member_elim)
-              then obtain e where "c \<in> e \<and> e \<in> (graph_diff E (X \<union> Y))" by auto
+              then obtain e where e:"c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)"
+                by auto
               then have "e \<inter> (X \<union> Y) = {}" 
                 by (simp add: graph_diff_def)
-              then have "e \<inter> X = {}" by auto
-              then have "e \<in> (graph_diff E X)" 
-                by (metis (mono_tags, lifting) \<open>c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)\<close> graph_diff_def mem_Collect_eq)
+              then have "e \<inter> X = {}"
+                by auto
+              then have "e \<in> graph_diff E X" 
+                unfolding graph_diff_def 
+                using e graph_diff_member by fastforce
               then have "c \<in> Vs (graph_diff E X)" 
-                using \<open>c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)\<close> by blast
+                using \<open>c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)\<close> 
+                by blast
               then show False 
                 using \<open>c \<notin> Vs (graph_diff E X)\<close> by blast
             qed
             have "c \<notin> X \<union> Y" 
-              by (metis IntI \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> \<open>c \<in> C'\<close> odd_comps_in_diff_not_in_X empty_iff)
-            then have "{c} \<in> singl_in_diff E (X\<union>Y)" unfolding singl_in_diff_def 
-
-              using \<open>C' \<in> odd_comps_in_diff E (X \<union> Y)\<close> \<open>c \<notin> Vs (graph_diff E (X \<union> Y))\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>
-                component_in_E connected_components_notE_singletons 
-              
-              by (metis (no_types, lifting) False \<open>c \<in> C'\<close> singl_in_diffI subsetD)
-            
-            then have "{c} \<in> odd_comps_in_diff E (X\<union>Y)" 
+              by (metis IntI \<open>c \<in> C'\<close> asmC' empty_iff odd_comps_in_diff_not_in_X)
+            then have "{c} \<in> singl_in_diff E (X \<union> Y)" 
+              unfolding singl_in_diff_def 
+              using \<open>c \<in> C'\<close> c_notin_U asmC' component_in_E by fastforce
+            then have "{c} \<in> odd_comps_in_diff E (X \<union> Y)" 
               by (simp add: odd_comps_in_diff_def)
-            then have "connected_component (graph_diff E (X\<union>Y)) c = {c}" 
-
-              by (simp add: \<open>c \<notin> Vs (graph_diff E (X \<union> Y))\<close> connected_components_notE_singletons)
+            then have "connected_component (graph_diff E (X \<union> Y)) c = {c}" 
+              by (simp add: c_notin_U connected_components_notE_singletons)
             then have "C' = {c}" 
-              by (simp add: \<open>connected_component (graph_diff E (X\<union>Y)) c = C'\<close>)
-            then have "C' \<in>  singl_in_diff E (X\<union>Y)" 
+              by (simp add: conn_compC')
+            then have "C' \<in> singl_in_diff E (X \<union> Y)" 
               by (simp add: \<open>{c} \<in> singl_in_diff E (X\<union>Y)\<close>)
-
             then show False 
               by (simp add: False)
           qed
-          then have "C' \<in> odd_components (graph_diff E X)" unfolding odd_components_def
-
-            using \<open>connected_component (graph_diff E X) c = C'\<close> \<open>odd (card C')\<close> 
-            by (simp add: odd_componentI)
+          then have "C' \<in> odd_components (graph_diff E X)"
+            unfolding odd_components_def 
+            by (simp add: \<open>odd (card C')\<close> conn_compC odd_componentI)
           then show ?thesis 
             by (simp add: odd_comps_in_diff_def)
         qed
-        then show " C' \<in> odd_comps_in_diff E X - {C} \<union>
-          odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
-
+        then show "C' \<in> odd_comps_in_diff E X - {C} \<union>
+                   odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
           using False \<open>c \<in> C'\<close> by blast
       qed
     qed
-    show " odd_comps_in_diff E X - {C} \<union>
-    odd_comps_in_diff
-     (component_edges (graph_diff E X) C) Y
-    \<subseteq> odd_comps_in_diff E (X \<union> Y)"
+    show " odd_comps_in_diff E X - {C} \<union> odd_comps_in_diff
+     (component_edges (graph_diff E X) C) Y \<subseteq> odd_comps_in_diff E (X \<union> Y)"
     proof
       fix C'
-      assume "C' \<in> odd_comps_in_diff E X - {C} \<union>
-             odd_comps_in_diff
-              (component_edges (graph_diff E X)
-                C)
-              Y"
+      assume asmC'odd:"C' \<in> odd_comps_in_diff E X - {C} \<union> odd_comps_in_diff
+              (component_edges (graph_diff E X) C) Y"
       show "C' \<in> odd_comps_in_diff E (X \<union> Y)"
       proof(cases "C' \<in> odd_comps_in_diff E X - {C}")
         case True
         then have "C' \<noteq> C" 
           by blast
-        then have "C' \<inter> C = {}" 
-          by (metis DiffD1 True assms(1) assms(3) diff_component_disjoint)
-        have "C' \<in> odd_comps_in_diff E X" 
+        then have "C' \<inter> C = {}"
+          by (metis Diff_iff True assms(3) diff_component_disjoint)
+        have C'_odd: "C' \<in> odd_comps_in_diff E X" 
           using True by auto
         have "C' \<noteq> {}" 
-          using \<open>C' \<in> odd_comps_in_diff E X\<close> assms(1) assms(3) odd_components_nonempty by auto
-        then obtain c where "c \<in> C'" by blast
-        then have "connected_component (graph_diff E X) c = C'" 
-          by (simp add: \<open>C' \<in> odd_comps_in_diff E X\<close> assms(1) assms(3) odd_comps_in_diff_is_component)
+          using C'_odd odd_components_nonempty by blast
+        then obtain c where "c \<in> C'" 
+          by blast
+        then have conn_C':"connected_component (graph_diff E X) c = C'" 
+          by (simp add: C'_odd assms(1) assms(3) odd_comps_in_diff_is_component)
         have "c \<notin> C" 
-          by (metis IntI \<open>C' \<in> odd_comps_in_diff E X\<close> \<open>C' \<noteq> C\<close> \<open>c \<in> C'\<close> assms(1) assms(3) diff_component_disjoint empty_iff)
-
-        have "connected_component (graph_diff E X) c = connected_component (graph_diff E (X \<union> Y)) c"
+          using \<open>C' \<inter> C = {}\<close> \<open>c \<in> C'\<close> by blast
+        have conn_same: "connected_component (graph_diff E X) c = 
+                         connected_component (graph_diff E (X \<union> Y)) c"
         proof(safe)
           {
             fix x
-            assume "x \<in> connected_component (graph_diff E X) c"
-            show " x \<in> connected_component
-               (graph_diff E (X \<union> Y)) c"
+            assume asmx:"x \<in> connected_component (graph_diff E X) c"
+            show "x \<in> connected_component (graph_diff E (X \<union> Y)) c"
             proof(cases "x = c")
               case True
               then show ?thesis 
                 by (simp add: in_own_connected_component)
             next
               case False
-
-              then have "(\<exists>p. walk_betw (graph_diff E X) x p c)"
+              then have "\<exists>p. walk_betw (graph_diff E X) x p c"
                 unfolding connected_component_def 
-                by (metis \<open>x \<in> connected_component (graph_diff E X) c\<close> connected_components_member_sym in_con_comp_has_walk)
-              then obtain p where p_walk:"walk_betw (graph_diff E X) x p c" by auto
+                by (metis asmx connected_components_member_sym in_con_comp_has_walk)
+              then obtain p where p_walk:"walk_betw (graph_diff E X) x p c"
+                by auto
               then have "last p = c" 
                 by fastforce
-              then have "path (graph_diff E X) p" using p_walk unfolding walk_betw_def  by auto
-
+              then have "path (graph_diff E X) p" 
+                using p_walk unfolding walk_betw_def  by auto
               then have "\<forall>z \<in> set p. z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E (X\<union>Y)) c"
                 using `last p = c`
               proof(induct p) 
@@ -1368,68 +1338,68 @@ next
               next
                 case (path1 v)
                 then show ?case 
-                  by (metis \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> empty_iff empty_set in_own_connected_component last_ConsL set_ConsD)
-
-
+                  by (metis \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> empty_iff empty_set in_own_connected_component 
+                      last_ConsL set_ConsD)
               next
                 case (path2 v v' vs)
                 have "last (v' # vs) = c" 
-                  using path2.prems 
-                  by auto
-                have "\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E (X\<union>Y)) c" 
+                  using path2.prems by auto
+                have zhyp: "\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and>
+                             z \<in> connected_component (graph_diff E (X \<union> Y)) c" 
                   using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
                 have "{v, v'} \<in> (graph_diff E X)" 
                   by (simp add: path2.hyps(1))
                 then have "{v, v'} \<inter> X = {}" 
                   by (metis (mono_tags, lifting) graph_diff_def mem_Collect_eq)
-                then have "v' \<in> connected_component (graph_diff E X) c" 
-
-                  by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> \<open>connected_component (graph_diff E X) c = C'\<close>)
-
+                then have v'_conn:"v' \<in> connected_component (graph_diff E X) c" 
+                  by (simp add: conn_C' zhyp)
                 then have "v \<in> connected_component (graph_diff E X) v'"
-
-                  by (meson connected_components_member_sym path2.hyps(1) vertices_edges_in_same_component)
+                  by (meson connected_components_member_sym path2.hyps(1) 
+                      vertices_edges_in_same_component)
                 then have "v \<notin> C" 
-                  by (metis \<open>C' \<inter> C = {}\<close> \<open>connected_component (graph_diff E X) c = C'\<close> \<open>v' \<in> connected_component (graph_diff E X) c\<close> connected_components_member_eq disjoint_iff_not_equal)
+                  by (metis \<open>C' \<inter> C = {}\<close> conn_C' 
+                      connected_components_member_eq disjoint_iff_not_equal v'_conn)
                 then have "v \<notin> Y" 
                   using assms(4) by blast
                 have "v' \<notin> Y" 
-                  using \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> assms(4) by auto
-                then have "{v, v'} \<inter> (Y) = {}" 
+                  using assms(4) zhyp by auto
+                then have "{v, v'} \<inter> Y = {}" 
                   by (simp add: \<open>v \<notin> Y\<close>)
-                have "{v, v'} \<inter> X = {}" using `{v, v'} \<in> (graph_diff E X)` unfolding graph_diff_def  
+                have "{v, v'} \<inter> X = {}"
+                  using `{v, v'} \<in> (graph_diff E X)` 
+                  unfolding graph_diff_def  
                   by fastforce
-                then have "{v, v'} \<inter> (X\<union>Y) = {}" 
+                then have "{v, v'} \<inter> (X \<union> Y) = {}" 
                   by (simp add: Int_Un_distrib \<open>{v, v'} \<inter> Y = {}\<close>)
                 then have "{v, v'} \<in> (graph_diff E (X \<union> Y))" 
                   by (metis (mono_tags, lifting) graph_diff_def mem_Collect_eq path2.hyps(1))
-
                 then show ?case 
-                  by (metis \<open>\<forall>z\<in>set (v' # vs). z \<in> C' \<and> z \<notin> C \<and> z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> \<open>connected_component (graph_diff E X) c = C'\<close> \<open>v \<in> connected_component (graph_diff E X) v'\<close> \<open>v \<notin> C\<close> connected_components_member_eq connected_components_member_sym list.set_intros(1) set_ConsD vertices_edges_in_same_component)
+                  by (metis \<open>v \<in> connected_component (graph_diff E X) v'\<close> \<open>v \<notin> C\<close> conn_C' 
+                      connected_components_member_eq connected_components_member_sym 
+                      list.set_intros(1) set_ConsD vertices_edges_in_same_component zhyp)
               qed
-              then show " x \<in> connected_component (graph_diff E (X \<union> Y)) c" 
+              then show "x \<in> connected_component (graph_diff E (X \<union> Y)) c" 
                 by (metis list.set_sel(1) p_walk walk_betw_def)
-
             qed
           }
           fix x
-          assume "x \<in> connected_component (graph_diff E (X \<union> Y)) c"
-          show " x \<in> connected_component (graph_diff E X) c"
+          assume asmx: "x \<in> connected_component (graph_diff E (X \<union> Y)) c"
+          show "x \<in> connected_component (graph_diff E X) c"
           proof(cases "x = c")
             case True
             then show ?thesis 
               by (simp add: in_own_connected_component)
-
           next 
             case False
-            then have "(\<exists>p. walk_betw (graph_diff E (X \<union> Y)) x p c)"
+            then have "\<exists>p. walk_betw (graph_diff E (X \<union> Y)) x p c"
               unfolding connected_component_def 
-              by (metis \<open>x \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> connected_components_member_sym in_con_comp_has_walk)
-            then obtain p where p_walk:"walk_betw (graph_diff E (X \<union> Y)) x p c" by auto
+              by (metis asmx connected_components_member_sym in_con_comp_has_walk)
+            then obtain p where p_walk:"walk_betw (graph_diff E (X \<union> Y)) x p c"
+              by auto
             then have "last p = c" 
               by fastforce
-            then have "path (graph_diff E (X \<union> Y)) p" using p_walk unfolding walk_betw_def  by auto
-
+            then have "path (graph_diff E (X \<union> Y)) p" 
+              using p_walk unfolding walk_betw_def  by auto
             then have "\<forall>z \<in> set p. z \<in> connected_component (graph_diff E X) c"
               using `last p = c`
             proof(induct p) 
@@ -1446,124 +1416,118 @@ next
               have "last (v' # vs) = c" 
                 using path2.prems 
                 by auto
-              have "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c" 
+              have zhyp: "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c" 
                 using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
-              have "{v, v'} \<in> (graph_diff E (X \<union> Y))" 
+              have "{v, v'} \<in> graph_diff E (X \<union> Y)" 
                 by (simp add: path2.hyps(1))
-              then have "{v, v'} \<in> (graph_diff E (X))" unfolding graph_diff_def  
+              then have "{v, v'} \<in> graph_diff E X" 
+                unfolding graph_diff_def  
                 by blast
               then have "v' \<in> connected_component (graph_diff E X) c" 
-                by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c\<close>)
-
+                by (simp add: zhyp)
               then show ?case 
-                by (metis \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E X) c\<close> \<open>{v, v'} \<in> graph_diff E X\<close> connected_components_member_eq insert_commute set_ConsD vertices_edges_in_same_component)
+                by (metis zhyp \<open>{v, v'} \<in> graph_diff E X\<close> connected_components_member_eq 
+                    insert_commute set_ConsD vertices_edges_in_same_component)
             qed
-            then show " x \<in> connected_component (graph_diff E (X)) c" 
+            then show "x \<in> connected_component (graph_diff E (X)) c" 
               by (metis list.set_sel(1) p_walk walk_betw_def)
           qed
         qed
-        then have " connected_component (graph_diff E (X \<union> Y)) c = C'" 
-          by (simp add: \<open>connected_component (graph_diff E X) c = C'\<close>)
-        show " C' \<in> odd_comps_in_diff  E (X \<union> Y)"
+        then have conn_diff_C':"connected_component (graph_diff E (X \<union> Y)) c = C'" 
+          using conn_C' by presburger
+        show "C' \<in> odd_comps_in_diff E (X \<union> Y)"
         proof(cases "C' \<in> singl_in_diff E X")
           case True
           then have "C' = {c}" 
-            by (smt (verit) IntI \<open>c \<in> C'\<close> \<open>connected_component (graph_diff E X) c = C'\<close> assms(1) assms(2) connected_components_notE_singletons diff_disjoint_elements(1) empty_iff vs_member_intro)
-          then have "connected_component (graph_diff E (X\<union>Y)) c = {c}" 
-            by (simp add: \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
-          then have "c \<notin>  Vs (graph_diff E X)"
-            by (smt (verit, ccfv_SIG) IntI True \<open>c \<in> C'\<close> assms(1) assms(2) diff_disjoint_elements(1) empty_iff vs_member_intro)
-          have " c \<notin> Vs (graph_diff E (X\<union>Y))"
+            apply(elim singl_in_diffE)
+            using \<open>c \<in> C'\<close> by fastforce
+          then have comp_singl:"connected_component (graph_diff E (X \<union> Y)) c = {c}" 
+            using conn_diff_C' by auto
+          then have "c \<notin>  Vs (graph_diff E X)" 
+            using True
+            apply(elim singl_in_diffE)
+            using \<open>c \<in> C'\<close> by blast
+          have c_notin_diff:"c \<notin> Vs (graph_diff E (X \<union> Y))"
           proof(rule ccontr)
-            assume " \<not> c \<notin> Vs (graph_diff E (X\<union>Y))"
-            then have "\<exists> e. c \<in> e \<and> e \<in> (graph_diff E (X\<union>Y))" 
+            assume "\<not> c \<notin> Vs (graph_diff E (X \<union> Y))"   
+            then obtain e where e:"c \<in> e \<and> e \<in> (graph_diff E (X \<union> Y))"
               by (meson vs_member_elim)
-            then obtain e where "c \<in> e \<and> e \<in> (graph_diff E (X\<union>Y))" by auto
-            then have "e \<subseteq> connected_component (graph_diff E (X\<union>Y)) c" 
-              by (smt (z3) \<open>connected_component (graph_diff E (X\<union>Y)) c = {c}\<close> assms(1) graph_diff_subset in_con_comp_insert insertE insert_Diff insert_commute insert_subset singletonD)
+            then have "e \<subseteq> connected_component (graph_diff E (X \<union> Y)) c" 
+              by (smt (z3) comp_singl assms(1) graph_diff_subset in_con_comp_insert insertE
+                  insert_Diff insert_commute insert_subset singletonD)
             then show False 
-
-              by (metis Set.set_insert \<open>c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = {c}\<close> assms(1) graph_diff_subset insert_subset singletonD)
+              by (metis \<open>C' = {c}\<close> assms(1) conn_diff_C' e graph_diffE insert_commute
+                  singleton_insert_inj_eq')
           qed
           have "c \<notin> X \<union> Y" 
-            by (metis IntI Un_iff \<open>C' \<in> odd_comps_in_diff E X\<close> \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> assms(4) odd_comps_in_diff_not_in_X empty_iff subsetD)
-          then have "{c} \<in> singl_in_diff E (X\<union>Y)" 
-            by (smt (verit, del_insts) \<open>C' = {c}\<close> \<open>C' \<in> odd_comps_in_diff E X\<close> \<open>c \<notin> Vs (graph_diff E (X \<union> Y))\<close> component_in_E insert_subset mem_Collect_eq singl_in_diff_def)
-
+            by (metis C'_odd IntI Un_iff \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> assms(4) empty_iff 
+                odd_comps_in_diff_not_in_X subsetD)
+          then have "{c} \<in> singl_in_diff E (X \<union> Y)" 
+            by (meson C'_odd \<open>c \<in> C'\<close> c_notin_diff component_in_E singl_in_diffI subsetD)
           then have "C' \<in> singl_in_diff E (X\<union>Y)" 
             by (simp add: \<open>C' = {c}\<close>)
-
           then show ?thesis 
             by (simp add: odd_comps_in_diff_def)
         next
           case False
           then have "C' \<in> odd_components (graph_diff E X)" 
-            by (metis UnE \<open>C' \<in> odd_comps_in_diff E X\<close> odd_comps_in_diff_def)
+            using C'_odd odd_comps_in_diffE by blast
           then have "odd (card C')" 
             by (simp add: odd_components_def odd_component_def)
           have "c \<notin> X \<union> Y" 
-            by (metis IntI Un_iff \<open>C' \<in> odd_comps_in_diff E X\<close> \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> assms(4) odd_comps_in_diff_not_in_X empty_iff subsetD)
-          have "c\<in>Vs (graph_diff E (X))" 
-            by (smt (verit, del_insts) False UnI1 \<open>C' \<in> odd_comps_in_diff E X\<close> \<open>c \<notin> X \<union> Y\<close> \<open>connected_component (graph_diff E X) c = C'\<close> component_in_E connected_components_notE_singletons insert_subset mem_Collect_eq singl_in_diff_def)
-          then have "\<exists>e. c \<in> e \<and> e \<in> (graph_diff E (X))" 
+            by (metis C'_odd IntI Un_iff \<open>c \<in> C'\<close> \<open>c \<notin> C\<close> assms(4) empty_iff 
+                odd_comps_in_diff_not_in_X subsetD)
+          have "c \<in> Vs (graph_diff E X)"
+            using \<open>C' \<in> odd_components (graph_diff E X)\<close> \<open>c \<in> C'\<close> odd_components_elem_in_E by auto
+          then obtain e where e:"c \<in> e \<and> e \<in> graph_diff E X" 
             by (meson vs_member_elim)
-          then obtain e where "c \<in> e \<and> e \<in> (graph_diff E (X))" 
-            by blast
-          then have "c \<in> e \<and> e \<in> E \<and> e \<inter> X = {}" 
+          then have e_unfold:"c \<in> e \<and> e \<in> E \<and> e \<inter> X = {}" 
             by (simp add: graph_diff_def)
-          then have "e \<subseteq> C'" 
-            by (smt (z3) \<open>C' \<inter> C = {}\<close> \<open>c \<in> C'\<close> \<open>c \<in> e \<and> e \<in> graph_diff E X\<close> \<open>connected_component (graph_diff E X) c = C'\<close> assms(1) empty_iff in_con_comp_insert inf_le1 insertE insert_Diff insert_commute insert_subset)
+          have "e \<subseteq> C'" 
+            by (metis assms(1) conn_C' e edge_subset_component graph_invar_diff)
           then have "e \<inter> Y = {}" 
             using \<open>C' \<inter> C = {}\<close> assms(4) by blast
           then have "e \<inter> (X \<union> Y) = {}" 
-            by (simp add: Int_Un_distrib \<open>c \<in> e \<and> e \<in> E \<and> e \<inter> X = {}\<close>)
-          then have "e \<in> (graph_diff E (X \<union> Y))" 
-            by (simp add: \<open>c \<in> e \<and> e \<in> E \<and> e \<inter> X = {}\<close> graph_diff_def)
-
+            by (simp add: Int_Un_distrib e_unfold)
+          then have "e \<in> graph_diff E (X \<union> Y)" 
+            by (simp add: e_unfold graph_diff_def)
           then have "c\<in>Vs (graph_diff E (X \<union> Y))" 
-            using \<open>c \<in> e \<and> e \<in> graph_diff E X\<close> by blast
-
-          then have "C' \<in> odd_components (graph_diff E (X \<union> Y))" unfolding odd_components_def
-
-            using \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close> \<open>odd (card C')\<close> 
-            by (simp add: odd_componentI)
-
+            using e by blast
+          then have "C' \<in> odd_components (graph_diff E (X \<union> Y))"
+            unfolding odd_components_def
+            by (simp add: \<open>odd (card C')\<close> conn_diff_C' odd_componentI)
           then show ?thesis 
             by (simp add: odd_comps_in_diff_def)
         qed 
-
       next
         case False
-        then have "C' \<in>  odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
-          using \<open>C' \<in> odd_comps_in_diff E X - {C} \<union> odd_comps_in_diff (component_edges (graph_diff E X) C) Y\<close> by blast
+        then have C'diffY:"C' \<in> odd_comps_in_diff (component_edges (graph_diff E X) C) Y"
+          using asmC'odd by blast
         let ?C = "(component_edges (graph_diff E X) C)"
         have "graph_invar ?C" 
-          by (smt (verit, best) Berge.component_edges_subset assms(1) graph_diff_subset graph_invar_subset)
+          by (meson Berge.component_edges_subset Vs_subset assms(1) graph_diff_subset 
+              in_mono rev_finite_subset)
         have "C' \<subseteq> Vs ?C" 
-          by (meson \<open>C' \<in> odd_comps_in_diff (component_edges (graph_diff E X) C) Y\<close> component_in_E)
-        have "Vs ?C \<subseteq> C" unfolding component_edges_def  
+          by (meson C'diffY component_in_E)
+        have "Vs ?C \<subseteq> C"
+          unfolding component_edges_def 
           by (smt (verit, ccfv_SIG) mem_Collect_eq subset_eq vs_member)
         then have "C' \<subseteq> C" 
-          using \<open>C' \<subseteq> Vs (component_edges (graph_diff E X) C)\<close> by auto
+          using \<open>C' \<subseteq> Vs ?C\<close> by auto
         have "C' \<inter> Y = {}" 
-          using \<open>C' \<in> odd_comps_in_diff (component_edges (graph_diff E X) C) Y\<close> odd_comps_in_diff_not_in_X by auto
-
-        then have "C' \<noteq> {}" using odd_components_nonempty
-          using \<open>C' \<in> odd_comps_in_diff ?C Y\<close> `graph_invar ?C` by fastforce
+          using C'diffY odd_comps_in_diff_not_in_X by blast
+        then have "C' \<noteq> {}" 
+          using odd_components_nonempty \<open>C' \<in> odd_comps_in_diff ?C Y\<close> `graph_invar ?C` by fastforce
         then obtain c where "c \<in> C'"
           by blast
-        then have "connected_component (graph_diff ?C Y) c = C'"
-          using odd_comps_in_diff_is_component
-          using `graph_invar ?C` `C' \<in> odd_comps_in_diff ?C Y` 
-          
-          by (simp add: odd_comps_in_diff_is_component)
-
-        have "connected_component (graph_diff E (X\<union> Y)) c = 
-      connected_component (graph_diff ?C Y) c"
+        then have conn_diffY:"connected_component (graph_diff ?C Y) c = C'"
+          by (simp add: C'diffY odd_comps_in_diff_is_component)
+        have "connected_component (graph_diff E (X \<union> Y)) c = 
+              connected_component (graph_diff ?C Y) c"
         proof(safe)
           {
             fix x
-            assume "x \<in> connected_component (graph_diff E (X\<union> Y)) c"
+            assume asmx:"x \<in> connected_component (graph_diff E (X \<union> Y)) c"
             show "x \<in>  connected_component (graph_diff ?C Y) c"
             proof(cases "x = c")
               case True
@@ -1571,16 +1535,15 @@ next
                 by (simp add: in_own_connected_component)
             next
               case False
-              then have "(\<exists>p. walk_betw (graph_diff E (X\<union> Y)) x p c)"
+              then have "\<exists>p. walk_betw (graph_diff E (X \<union> Y)) x p c"
                 unfolding connected_component_def 
-                by (metis \<open>x \<in> connected_component (graph_diff E (X\<union> Y)) c\<close> connected_components_member_sym in_con_comp_has_walk)
-
-
-              then obtain p where p_walk:"walk_betw (graph_diff E (X\<union> Y)) x p c" by auto
+                by (metis asmx connected_components_member_sym in_con_comp_has_walk)
+              then obtain p where p_walk:"walk_betw (graph_diff E (X \<union> Y)) x p c"
+                by auto
               then have "last p = c" 
                 by fastforce
-              then have "path (graph_diff E (X\<union> Y)) p" using p_walk unfolding walk_betw_def  by auto
-
+              then have "path (graph_diff E (X \<union> Y)) p" 
+                using p_walk unfolding walk_betw_def  by auto
               then have "\<forall>z \<in> set p. z \<in> C'"
                 using `last p = c`
               proof(induct p)
@@ -1590,9 +1553,7 @@ next
               next
                 case (path1 v)
                 then show ?case  
-                  using \<open>c \<in> C'\<close> \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> 
-
-                  by (metis \<open>C' \<subseteq> C\<close> empty_iff empty_set in_own_connected_component last_ConsL set_ConsD subset_eq)
+                  using \<open>c \<in> C'\<close> by auto
               next
                 case (path2 v v' vs)
                 have "last (v' # vs) = c" 
@@ -1601,56 +1562,52 @@ next
                 have "\<forall>z\<in>set (v' # vs). z \<in> C' " 
                   using \<open>last (v' # vs) = c\<close> path2.hyps(3)
                   by fastforce
-                have "{v, v'} \<in> (graph_diff E (X\<union>Y))" 
+                have "{v, v'} \<in> graph_diff E (X \<union> Y)" 
                   by (simp add: path2.hyps(1))
                 then have "{v, v'} \<inter> (X \<union>Y) = {}" 
-                  by (smt (verit, ccfv_threshold) Un_subset_iff assms(1) assms(3) assms(4) assms(2) component_in_E diff_disjoint_elements(2) disjoint_iff_not_equal dual_order.trans vs_member_intro)
+                  by (meson graph_diffE)
                 then have "{v, v'} \<inter> Y = {}"
                   by blast
-                then have "{v, v'} \<inter> X = {}" using `{v, v'} \<inter> (X \<union>Y) = {}`
-                  by blast
-                then have "{v, v'} \<in> (graph_diff E X)" unfolding graph_diff_def 
+                then have "{v, v'} \<inter> X = {}"
+                  using `{v, v'} \<inter> (X \<union>Y) = {}` by blast
+                then have "{v, v'} \<in> graph_diff E X" 
+                  unfolding graph_diff_def 
                   using graph_diff_subset path2.hyps(1) by auto
-
                 have "v' \<in> C'"
-
                   by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> C'\<close>)
                 then have "v' \<in> C"
                   using \<open>C' \<subseteq> C\<close> by blast
-
-                then have "C = connected_component  (graph_diff E (X)) c" 
-
-                  by (metis (no_types, lifting) \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(1) assms(3) odd_comps_in_diff_is_component subsetD)
-                then have "v' \<in> connected_component  (graph_diff E (X)) c"
-
+                then have "C = connected_component (graph_diff E X) c" 
+                  by (metis \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(3) in_mono odd_comps_in_diff_is_component)
+                then have "v' \<in> connected_component (graph_diff E X) c"
                   using \<open>v' \<in> C\<close> by blast
                 then have "v \<in> C" 
-                  by (metis \<open>C = connected_component (graph_diff E X) c\<close> \<open>{v, v'} \<in> graph_diff E X\<close> connected_components_member_eq connected_components_member_sym vertices_edges_in_same_component)
+                  by (metis \<open>v' \<in> C\<close> \<open>{v, v'} \<in> graph_diff E X\<close> assms(3) 
+                      connected_components_member_sym odd_comps_in_diff_is_component
+                      vertices_edges_in_same_component)
                 then have "{v, v'} \<subseteq> C" 
                   by (simp add: \<open>v' \<in> C\<close>)
-                then have "{v, v'} \<in> ?C" using component_edges_def 
-                  using \<open>{v, v'} \<in> graph_diff E X\<close> by fastforce
-
-                then have "{v, v'} \<in> (graph_diff ?C Y)" using `{v, v'} \<inter> Y = {}`
-                  unfolding graph_diff_def 
-                  by blast
+                then have "{v, v'} \<in> ?C" 
+                  using component_edges_def \<open>{v, v'} \<in> graph_diff E X\<close> by fastforce
+                then have vv':"{v, v'} \<in> graph_diff ?C Y" 
+                  unfolding graph_diff_def using `{v, v'} \<inter> Y = {}` by blast
                 then have "v' \<in> connected_component (graph_diff ?C Y) c" 
-                  using \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> \<open>v' \<in> C'\<close> by blast
+                  using \<open>v' \<in> C'\<close> conn_diffY by blast
                 then have "v \<in> connected_component (graph_diff ?C Y) c" 
-                  by (metis \<open>{v, v'} \<in> graph_diff (component_edges (graph_diff E X) C) Y\<close> connected_components_member_eq insert_commute vertices_edges_in_same_component)
+                  by (metis vv' connected_components_member_eq insert_commute
+                    vertices_edges_in_same_component)
                 then have "v \<in> C'" 
-                  using \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> by blast
-
+                  using conn_diffY by auto
                 then show ?case 
                   using \<open>\<forall>z\<in>set (v' # vs). z \<in> C'\<close> by fastforce
-
               qed
-              then show "x  \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c"
-                by (metis \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> list.set_sel(1) p_walk walk_betw_def)
+              then show "x \<in> connected_component (graph_diff 
+                                                  (component_edges (graph_diff E X) C) Y) c"
+                by (metis conn_diffY list.set_sel(1) p_walk walk_betw_def)
             qed
           }
           fix x
-          assume "x \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c" 
+          assume asm:"x \<in> connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c" 
           show " x \<in> connected_component (graph_diff E (X \<union> Y)) c"
           proof(cases "x = c")
             case True
@@ -1659,14 +1616,16 @@ next
 
           next
             case False
-            then have "(\<exists>p. walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c)"
+            then have "\<exists>p. walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c"
               unfolding connected_component_def 
-              by (metis \<open>x \<in> connected_component  (graph_diff (component_edges (graph_diff E X) C) Y) c\<close> connected_components_member_sym in_con_comp_has_walk)
-            then obtain p where p_walk:"walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c" by auto
+              by (metis asm connected_components_member_sym in_con_comp_has_walk)
+            then obtain p where p_walk:
+                "walk_betw  (graph_diff (component_edges (graph_diff E X) C) Y) x p c" 
+              by auto
             then have "last p = c" 
               by fastforce
-            then have "path  (graph_diff (component_edges (graph_diff E X) C) Y) p" using p_walk unfolding walk_betw_def  by auto
-
+            then have "path (graph_diff (component_edges (graph_diff E X) C) Y) p" 
+              using p_walk unfolding walk_betw_def by auto
             then have "\<forall>z \<in> set p. z \<in> connected_component (graph_diff E (X \<union> Y)) c"
               using `last p = c`
             proof(induct p) 
@@ -1682,128 +1641,102 @@ next
               have "last (v' # vs) = c" 
                 using path2.prems 
                 by auto
-              have "\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c" 
+              have zhyp:"\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c" 
                 using \<open>last (v' # vs) = c\<close> path2.hyps(3) by blast
               have "{v, v'} \<in> (graph_diff (component_edges (graph_diff E X) C) Y)" 
                 by (simp add: path2.hyps(1))
               then have "{v, v'} \<inter> Y = {}" unfolding graph_diff_def 
                 by fastforce
-              have "{v, v'} \<in>  (component_edges (graph_diff E X) C)" 
+              have "{v, v'} \<in> (component_edges (graph_diff E X) C)" 
                 using graph_diff_subset path2.hyps(1) by blast
               then have "{v, v'} \<in> (graph_diff E X)" 
                 using Berge.component_edges_subset by blast
-              then have "{v, v'} \<inter> X = {}" unfolding graph_diff_def  
-                by fastforce
-              then have "{v, v'} \<in> (graph_diff E (X\<union>Y))" unfolding graph_diff_def 
-                using `{v, v'} \<inter> Y = {}` 
-                using \<open>{v, v'} \<in> graph_diff E X\<close> graph_diff_def by fastforce
-
-              then have "v' \<in> connected_component (graph_diff E (X\<union>Y)) c" 
-
-                by (simp add: \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close>)
-              then have "v \<in>  connected_component (graph_diff E (X\<union>Y)) c"
-
-                by (metis \<open>{v, v'} \<in> graph_diff E (X \<union> Y)\<close> connected_components_member_eq connected_components_member_sym vertices_edges_in_same_component)
-
-
-
-
+              then have "{v, v'} \<inter> X = {}"
+                unfolding graph_diff_def by fastforce
+              then have "{v, v'} \<in> (graph_diff E (X \<union> Y))" 
+                unfolding graph_diff_def 
+                using `{v, v'} \<inter> Y = {}` \<open>{v, v'} \<in> graph_diff E X\<close> graph_diff_def by fastforce
+              then have "v' \<in> connected_component (graph_diff E (X \<union> Y)) c" 
+                by (simp add: zhyp)
+              then have "v \<in> connected_component (graph_diff E (X \<union> Y)) c"
+                by (meson \<open>{v, v'} \<in> graph_diff E (X \<union> Y)\<close> connected_components_member_sym 
+                    connected_components_member_trans vertices_edges_in_same_component)
               then show ?case 
-                using \<open>\<forall>z\<in>set (v' # vs). z \<in> connected_component (graph_diff E (X \<union> Y)) c\<close> by fastforce
+                using zhyp by fastforce
             qed 
             then show ?thesis 
               by (metis list.set_sel(1) p_walk walk_betw_def)
           qed
         qed
-        then have " connected_component (graph_diff E (X \<union> Y)) c = C'"
-          by (simp add: \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close>)
-
-
+        then have connC'XY:"connected_component (graph_diff E (X \<union> Y)) c = C'"
+          using conn_diffY by fastforce
         show " C' \<in> odd_comps_in_diff  E (X \<union> Y)"
         proof(cases "C' \<in> singl_in_diff ?C Y")
           case True
           then have "\<exists>v. C' = {v} \<and> v \<in> Vs ?C \<and> v \<notin> Y \<and> v \<notin> Vs (graph_diff ?C Y)"
-            unfolding singl_in_diff_def
-
-            by blast
+            unfolding singl_in_diff_def by blast
           then have "C' = {c}" 
             using \<open>c \<in> C'\<close> by force
-
-
           then have "connected_component (graph_diff E (X\<union>Y)) c = {c}" 
-            by (simp add: \<open>C' = {c}\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close>)
-
-          have " c \<notin> Vs (graph_diff E (X\<union>Y))"
+            using connC'XY by fastforce
+          have "c \<notin> Vs (graph_diff E (X \<union> Y))" 
           proof(rule ccontr)
-            assume " \<not> c \<notin> Vs (graph_diff E (X\<union>Y))"
-            then have "\<exists> e. c \<in> e \<and> e \<in> (graph_diff E (X\<union>Y))" 
+            assume " \<not> c \<notin> Vs (graph_diff E (X \<union> Y))"
+            then obtain e where e:"c \<in> e \<and> e \<in> (graph_diff E (X \<union> Y))"
               by (meson vs_member_elim)
-            then obtain e where "c \<in> e \<and> e \<in> (graph_diff E (X\<union>Y))" by auto
             then have "e \<subseteq> connected_component (graph_diff E (X\<union>Y)) c" 
-              by (smt (z3) \<open>connected_component (graph_diff E (X\<union>Y)) c = {c}\<close> assms(1) graph_diff_subset in_con_comp_insert insertE insert_Diff insert_commute insert_subset singletonD)
+              by (smt (verit, best) \<open>C' = {c}\<close> assms(1) connC'XY graph_diffE insertCI
+                  insertE insert_commute singletonD vertices_edges_in_same_component)
             then show False 
-
-              by (metis Set.set_insert \<open>c \<in> e \<and> e \<in> graph_diff E (X \<union> Y)\<close> \<open>connected_component (graph_diff E (X \<union> Y)) c = {c}\<close> assms(1) graph_diff_subset insert_subset singletonD)
+              using \<open>connected_component (graph_diff E (X \<union> Y)) c = {c}\<close> 
+                assms(1) e graph_invar_diff by fastforce
           qed
           have "c \<notin> X \<union> Y" 
-            by (metis Un_iff \<open>C' \<inter> Y = {}\<close> \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(3) odd_comps_in_diff_not_in_X disjoint_iff_not_equal subset_eq)
-          then have "{c} \<in> singl_in_diff E (X\<union>Y)" 
-
-            by (smt (verit, ccfv_SIG) \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> \<open>c \<notin> Vs (graph_diff E (X \<union> Y))\<close> assms(3) component_in_E mem_Collect_eq singl_in_diff_def subsetD)
-
-          then have "C' \<in> singl_in_diff E (X\<union>Y)" 
+          by (metis Un_iff \<open>C' \<inter> Y = {}\<close> \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(3) 
+              odd_comps_in_diff_not_in_X disjoint_iff_not_equal subset_eq)
+        then have "{c} \<in> singl_in_diff E (X \<union> Y)" 
+          by (meson \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> \<open>c \<notin> Vs (graph_diff E (X \<union> Y))\<close> assms(3) 
+              component_in_E singl_in_diffI subsetD)
+          then have "C' \<in> singl_in_diff E (X \<union> Y)" 
             by (simp add: \<open>C' = {c}\<close>)
-
           then show ?thesis 
             by (simp add: odd_comps_in_diff_def)
         next
           case False
-          then have "C' \<in> odd_components (graph_diff ?C Y)" 
-            using \<open>C' \<in> odd_comps_in_diff (component_edges (graph_diff E X) C) Y\<close>
-              odd_comps_in_diff_def 
-            by (simp add: odd_comps_in_diff_def)
+          then have C'_odd_diff:"C' \<in> odd_components (graph_diff ?C Y)" 
+            using C'diffY by (simp add: odd_comps_in_diff_def)
           then have "odd (card C')" 
             by (simp add: odd_components_def odd_component_def)
           have "c \<notin> X \<union> Y" 
-            by (metis Un_iff \<open>C' \<inter> Y = {}\<close> \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(3) odd_comps_in_diff_not_in_X disjoint_iff_not_equal subset_eq)
-
-          have "c\<in>Vs (graph_diff ?C Y)" 
-            using `C' \<in> odd_components (graph_diff ?C Y)`
-            unfolding odd_components_def odd_component_def
-            by (smt (verit) \<open>\<And>thesis. (\<And>c. c \<in> C' \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> connected_components_notE_singletons in_connected_component_in_edges mem_Collect_eq singletonD)
-
-          then have "\<exists>e. c \<in> e \<and> e \<in> (graph_diff ?C Y)" 
-            by (meson vs_member_elim)
-          then obtain e where "c \<in> e \<and> e \<in> (graph_diff ?C Y)" 
-            by blast
+            by (metis UnE \<open>C' \<inter> Y = {}\<close> \<open>C' \<subseteq> C\<close> \<open>c \<in> C'\<close> assms(3) disjoint_iff_not_equal
+                odd_comps_in_diff_not_in_X subset_eq)
+          have "c \<in> Vs (graph_diff ?C Y)" 
+            using False \<open>C' \<subseteq> Vs ?C\<close> \<open>c \<notin> X \<union> Y\<close> conn_diffY 
+              connected_components_notE_singletons singl_in_diffI by fastforce
+            then obtain e where e:"c \<in> e \<and> e \<in> graph_diff ?C Y" 
+              by (meson vs_member_elim)
           then have "c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}" 
             by (simp add: graph_diff_def)
           then have "e \<subseteq> C'" 
-            by (metis (full_types) \<open>C' \<inter> Y = {}\<close> \<open>c \<in> C'\<close> \<open>c \<in> e \<and> e \<in> graph_diff (component_edges (graph_diff E X) C) Y\<close> \<open>connected_component (graph_diff (component_edges (graph_diff E X) C) Y) c = C'\<close> \<open>graph_invar (component_edges (graph_diff E X) C)\<close> in_con_comp_insert inf_le1 insertE insert_Diff insert_commute insert_subset singletonD)
-
-
+            by (smt (verit, del_insts) Int_commute Int_insert_right_if1 \<open>C' \<inter> Y = {}\<close> \<open>c \<in> C'\<close> 
+                \<open>graph_invar ?C\<close> conn_diffY connected_components_member_sym e in_con_comp_insert
+                inf_le1 insert_Diff insert_disjoint(1) singleton_insert_inj_eq')
           then have "e \<inter> (X \<union> Y) = {}" 
-            by (smt (z3) Int_Un_distrib Int_Un_eq(4) Un_Int_assoc_eq Un_absorb Un_commute \<open>C' \<subseteq> C\<close> \<open>c \<in> e \<and> e \<in> component_edges (graph_diff E X) C \<and> e \<inter> Y = {}\<close> assms(3) odd_comps_in_diff_not_in_X subset_trans)
-          have "e \<in> E" using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` 
-            by (metis Diff_insert_absorb Berge.component_edges_subset graph_diff_subset subset_Diff_insert)
-
+            by (smt (z3) Int_Un_distrib Int_Un_eq(4) Un_Int_assoc_eq Un_absorb Un_commute \<open>C' \<subseteq> C\<close>
+                \<open>c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}\<close> assms(3) odd_comps_in_diff_not_in_X subset_trans)
+          have "e \<in> E" 
+            using `c \<in> e \<and> e \<in> ?C \<and> e \<inter> Y = {}` Berge.component_edges_subset graph_diff_member 
+            by blast
           then have "e \<in> (graph_diff E (X \<union> Y))" 
             by (simp add: \<open>e \<inter> (X \<union> Y) = {}\<close> graph_diff_def)
-
           then have "c\<in>Vs (graph_diff E (X \<union> Y))" 
-            using \<open>c \<in> e \<and> e \<in> graph_diff (component_edges (graph_diff E X) C) Y\<close> by blast
-
+            using e by blast
           then have "C' \<in> odd_components (graph_diff E (X \<union> Y))" 
             unfolding odd_components_def odd_component_def
-
-            using \<open>connected_component (graph_diff E (X \<union> Y)) c = C'\<close> \<open>odd (card C')\<close> 
-
-            by blast
-
+            using \<open>odd (card C')\<close> connC'XY by blast
           then show ?thesis 
             by (simp add: odd_comps_in_diff_def)
         qed 
-
       qed
     qed
   qed
@@ -1813,15 +1746,13 @@ lemma odd_comps_in_diff_same_inter_vertices:
   assumes "graph_invar E"
   shows "odd_comps_in_diff E (Y \<inter> Vs E) = odd_comps_in_diff E Y"
 proof -
-  have "graph_diff E (Y \<inter> Vs E) = graph_diff E Y" unfolding graph_diff_def by blast
-
-  then have "singl_in_diff E (Y \<inter> Vs E) = singl_in_diff E Y" unfolding singl_in_diff_def
-    apply safe 
-     apply (simp)
-     by force
-
-   then show ?thesis 
-     by (simp add: \<open>graph_diff E (Y \<inter> Vs E) = graph_diff E Y\<close> odd_comps_in_diff_def)
- qed
+  have "graph_diff E (Y \<inter> Vs E) = graph_diff E Y" 
+    unfolding graph_diff_def by blast
+  then have "singl_in_diff E (Y \<inter> Vs E) = singl_in_diff E Y" 
+    unfolding singl_in_diff_def
+    by (safe;simp)
+  then show ?thesis 
+    by (simp add: \<open>graph_diff E (Y \<inter> Vs E) = graph_diff E Y\<close> odd_comps_in_diff_def)
+qed
 
 end

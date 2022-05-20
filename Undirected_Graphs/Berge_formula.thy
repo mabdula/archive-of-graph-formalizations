@@ -10,7 +10,7 @@ proof -
   have "finite (Vs M)" using assms(1) 
     by simp
   have "card (Vs M) =  sum (\<lambda> e. card e) M"
-    using \<open>finite (Vs M)\<close> \<open>matching M\<close> werew by fastforce
+    using \<open>finite (Vs M)\<close> \<open>matching M\<close> matching_card_is_sum by fastforce
   also have "\<dots> =  sum (\<lambda> e. 2) M" 
     by (smt (verit, del_insts)  \<open>graph_invar M\<close> card_edge mem_Collect_eq subset_eq sum.cong)
   also have "\<dots> = card M * 2" by simp  
@@ -22,7 +22,7 @@ lemma left_uncoverred_matching:
   assumes "graph_invar E"
   assumes "graph_matching E M"
   assumes "X \<subseteq> Vs E"
-  shows " 2 * (card M) + card (diff_odd_components E X) - card X \<le> card (Vs E)"
+  shows " 2 * (card M) + card (odd_comps_in_diff E X) - card X \<le> card (Vs E)"
 proof -
   have "finite (Vs M)" 
     by (meson Vs_subset assms(1) assms(2) finite_subset)
@@ -31,7 +31,7 @@ proof -
   have "M \<subseteq> E" 
     by (simp add: assms(2))
   let ?comp_out  = "\<lambda> C. {e. e \<in> M \<and> (\<exists> x y. e = {x,y} \<and> y \<in> C \<and> x \<in> X)}"
-  let ?QX = "(diff_odd_components E X)"
+  let ?QX = "(odd_comps_in_diff E X)"
 
   have 2: "\<forall> e\<in> E. card e = 2" 
     using \<open>graph_invar E\<close> card_edge by blast
@@ -43,7 +43,7 @@ proof -
     fix C
     assume "C \<in> ?QX"
     have "card (Vs (?comp_out C)) =  sum (\<lambda> e. card e) (?comp_out C)"
-      using \<open>finite (Vs M)\<close> \<open>matching M\<close> werew by fastforce
+      using \<open>finite (Vs M)\<close> \<open>matching M\<close> matching_card_is_sum by fastforce
     also have "\<dots> =  sum (\<lambda> e. 2) (?comp_out C)" 
       by (smt (verit, del_insts) \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> card_edge mem_Collect_eq subset_eq sum.cong)
     also have "\<dots> = card (?comp_out C) * 2" by simp  
@@ -56,9 +56,9 @@ proof -
     fix C
     assume "C \<in> ?QX"
     have 5:"\<forall> e \<in> (?comp_out C). card (e \<inter> X) = 1"
-      using Int_commute diff_odd_components_not_in_X[of C E X]  \<open>C \<in> ?QX\<close> by force
+      using Int_commute odd_comps_in_diff_not_in_X[of C E X]  \<open>C \<in> ?QX\<close> by force
     have "card ((Vs (?comp_out C)) \<inter> X) = sum (\<lambda> e. card (e \<inter> X)) (?comp_out C)"
-      using werew2[of M "(?comp_out C)" X] `matching M` `finite (Vs M)` 
+      using matching_int_card_is_sum[of M "(?comp_out C)" X] `matching M` `finite (Vs M)` 
       by blast
     then show "card ((Vs (?comp_out C)) \<inter> X) =  card (?comp_out C)" using 5  
       by force   
@@ -73,7 +73,7 @@ proof -
   have "finite ?QX" 
     by (simp add: assms(1) diff_components_finite)
   have "\<forall> C1 \<in>?QX. \<forall> C2 \<in> ?QX.  C1 \<noteq> C2 \<longrightarrow> ((Vs (?comp_out C1))) \<inter> ((Vs (?comp_out C2))) = {}"
-    by (smt (verit, del_insts) \<open>matching M\<close> diff_component_disjoint diff_odd_components_not_in_X 
+    by (smt (verit, del_insts) \<open>matching M\<close> diff_component_disjoint odd_comps_in_diff_not_in_X 
         disjoint_iff_not_equal doubleton_eq_iff matching_unique_match mem_Collect_eq vs_member)
   then have "\<forall> C1 \<in>?QX. \<forall> C2 \<in> ?QX. 
     C1 \<noteq> C2 \<longrightarrow> ((Vs (?comp_out C1)) \<inter> X) \<inter> ((Vs (?comp_out C2)) \<inter> X) = {}"   
@@ -88,15 +88,15 @@ proof -
 
   then  have "sum (\<lambda> C. card ((Vs (?comp_out C)) \<inter> X)) ?QX \<le> card X" 
 
-    by (metis (no_types, lifting) \<open>(\<Union>C\<in>diff_odd_components E X. Vs {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<inter> X) \<subseteq> X\<close> assms(1) assms(3) card_mono finite_subset)
+    by (metis (no_types, lifting) \<open>(\<Union>C\<in>odd_comps_in_diff E X. Vs {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<inter> X) \<subseteq> X\<close> assms(1) assms(3) card_mono finite_subset)
 
 
   then have "sum (\<lambda> C. card (?comp_out C)) ?QX \<le> card X" 
-    using \<open>\<forall>C\<in>diff_odd_components E X. card (Vs {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<inter> X) = card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}\<close> by auto
+    using \<open>\<forall>C\<in>odd_comps_in_diff E X. card (Vs {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<inter> X) = card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}\<close> by auto
 
 
   then have "\<forall> C \<in> ?QX. finite (?comp_out C)" 
-    by (metis (mono_tags, lifting) Vs_def \<open>\<forall>C\<in>diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<subseteq> M\<close> assms(1) assms(2) finite_UnionD finite_subset)
+    by (metis (mono_tags, lifting) Vs_def \<open>\<forall>C\<in>odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<subseteq> M\<close> assms(1) assms(2) finite_UnionD finite_subset)
 
   let ?comp_out_empty = "{C. C \<in> ?QX \<and> ?comp_out C = {}}"
   let ?comp_out_non = "{C. C \<in> ?QX \<and> ?comp_out C \<noteq> {}}"
@@ -117,30 +117,30 @@ proof -
     have "sum (\<lambda> C. card (?comp_out C)) (?comp_out_non \<union> ?comp_out_empty) = 
         sum (\<lambda> C. card (?comp_out C)) (?comp_out_non) + sum (\<lambda> C. card (?comp_out C)) (?comp_out_empty)"
 
-      by (metis (no_types, lifting) \<open>finite (diff_odd_components E X)\<close> \<open>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<inter> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = {}\<close> \<open>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = diff_odd_components E X\<close> finite_Un sum.union_disjoint)
+      by (metis (no_types, lifting) \<open>finite (odd_comps_in_diff E X)\<close> \<open>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<inter> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = {}\<close> \<open>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = odd_comps_in_diff E X\<close> finite_Un sum.union_disjoint)
     then have "sum (\<lambda> C. card (?comp_out C)) ?comp_out_non = sum (\<lambda> C. card (?comp_out C)) ?QX"    
-      using \<open>(\<Sum>C | C \<in> diff_odd_components E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) = 0\<close> \<open>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = diff_odd_components E X\<close> by auto
+      using \<open>(\<Sum>C | C \<in> odd_comps_in_diff E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) = 0\<close> \<open>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = odd_comps_in_diff E X\<close> by auto
 
     then have "sum (\<lambda> C. card (?comp_out C)) ?comp_out_non \<le> card X" 
-      using \<open>(\<Sum>C\<in>diff_odd_components E X. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) \<le> card X\<close> by presburger
+      using \<open>(\<Sum>C\<in>odd_comps_in_diff E X. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) \<le> card X\<close> by presburger
 
     then have "\<forall> C \<in> ?comp_out_non. card(?comp_out C) \<ge> 1"
-      by (simp add: \<open>\<forall>C\<in>diff_odd_components E X. finite (?comp_out C)\<close> card_gt_0_iff Suc_leI)  
+      by (simp add: \<open>\<forall>C\<in>odd_comps_in_diff E X. finite (?comp_out C)\<close> card_gt_0_iff Suc_leI)  
     then have "sum (\<lambda> C. card (?comp_out C)) ?comp_out_non \<ge> card ?comp_out_non"
       using sum_mono 
       by (metis (no_types, lifting) card_eq_sum)
     then have "card X \<ge> card ?comp_out_non" 
-      using \<open>(\<Sum>C | C \<in> diff_odd_components E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) \<le> card X\<close> order_trans by blast
+      using \<open>(\<Sum>C | C \<in> odd_comps_in_diff E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}. card {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X}) \<le> card X\<close> order_trans by blast
     have "card ?QX = card ?comp_out_empty + card ?comp_out_non"
-      by (metis (no_types, lifting) \<open>finite (diff_odd_components E X)\<close> \<open>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<inter> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = {}\<close> \<open>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = diff_odd_components E X\<close> add.commute card_Un_disjoint finite_Un)
+      by (metis (no_types, lifting) \<open>finite (odd_comps_in_diff E X)\<close> \<open>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<inter> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = {}\<close> \<open>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<union> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} = odd_comps_in_diff E X\<close> add.commute card_Un_disjoint finite_Un)
 
     have "card ?comp_out_empty < card ?comp_out_empty + card ?comp_out_non - card X"
-      using \<open>card (diff_odd_components E X) = card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} + card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}}\<close> \<open>card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} < card (diff_odd_components E X) - card X\<close> by presburger
+      using \<open>card (odd_comps_in_diff E X) = card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} + card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}}\<close> \<open>card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} < card (odd_comps_in_diff E X) - card X\<close> by presburger
 
     then have "card ?comp_out_non > card X" 
       by (meson less_diff_conv nat_add_left_cancel_less)
     then show False 
-      using \<open>card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<le> card X\<close> not_less by blast
+      using \<open>card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} \<noteq> {}} \<le> card X\<close> not_less by blast
   qed
 
   have "\<forall>C \<in> ?comp_out_empty. \<exists>v \<in> C. v \<notin> Vs M"
@@ -148,7 +148,7 @@ proof -
     fix C
     assume "C \<in> ?comp_out_empty" 
     have "C \<in> ?QX" 
-      using \<open>C \<in> {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by force
+      using \<open>C \<in> {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by force
     have "?comp_out C = {}" using `C \<in> ?comp_out_empty`  
       by fastforce
     have e_in_C:"\<forall> e \<in> M. e \<inter> C = {} \<or> e \<inter> C = e"
@@ -157,14 +157,15 @@ proof -
       assume assms_edge: "e \<in> M" " x \<in> e" "x \<notin> C" "y \<in> e" "y \<in> C" 
       then have "e \<inter> X = {}" 
         using Diff_disjoint \<open>C \<in> ?QX\<close> \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> \<open>?comp_out C = {}\<close> 
-          diff_odd_components_not_in_X 
-        by (smt (verit, ccfv_threshold) disjoint_iff_not_equal insert_commute insert_iff mem_Collect_eq singletonD subset_eq)
+          odd_comps_in_diff_not_in_X 
+        by (smt (verit, best) disjoint_iff_not_equal empty_iff insert_commute insert_iff mem_Collect_eq subset_eq)
 
       then have "e \<in> (graph_diff E X)" 
-        using \<open>M \<subseteq> E\<close> \<open>e \<in> M\<close> by blast
+        using \<open>M \<subseteq> E\<close> \<open>e \<in> M\<close> 
+        by (simp add: graph_diffI subsetD)
       then have "x \<in> C" 
         by (smt (verit, ccfv_SIG) \<open>C \<in> ?QX\<close> \<open>M \<subseteq> E\<close> \<open>graph_invar E\<close> assms_edge
-            diff_odd_components_is_component empty_iff in_con_comp_insert 
+            odd_comps_in_diff_is_component empty_iff in_con_comp_insert 
             insert_Diff insert_commute insert_iff subsetD)
       then show "y \<in> {}"  using \<open>x \<notin> C\<close> by auto
     qed
@@ -174,7 +175,7 @@ proof -
       then have "\<forall>v \<in> C. v \<in> Vs M" by blast
       then have " ((Vs M) \<inter> C) = C" by auto
       have "card ((Vs M) \<inter> C) = sum (\<lambda> e. card (e \<inter> C)) M"
-        using werew2[of M M C]  `matching M`  \<open>finite (Vs M)\<close> by blast
+        using matching_int_card_is_sum[of M M C]  `matching M`  \<open>finite (Vs M)\<close> by blast
       then have "even (card C)" 
         using \<open>Vs M \<inter> C = C\<close>
         by (smt (verit) "2" \<open>M \<subseteq> E\<close> e_in_C dvd_sum even_numeral odd_card_imp_not_empty subset_eq)
@@ -184,7 +185,7 @@ proof -
   qed
   let ?not_in_M = "\<lambda> C. {v. v \<in> C \<and> v \<notin> Vs M}"
   have "\<forall>C \<in> ?comp_out_empty. ?not_in_M C \<noteq> {}" 
-    using \<open>\<forall>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. \<exists>v\<in>C. v \<notin> Vs M\<close> by auto
+    using \<open>\<forall>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. \<exists>v\<in>C. v \<notin> Vs M\<close> by auto
 
   have "\<forall>C \<in> ?comp_out_empty.  (?not_in_M C) \<subseteq> C"
     by blast
@@ -192,14 +193,14 @@ proof -
     by (metis (no_types, lifting) assms(1) finite_subset mem_Collect_eq odd_components_subset_vertices)
 
   then have "\<forall>C \<in> ?comp_out_empty. card (?not_in_M C) \<ge> 1" 
-    by (metis (no_types, lifting) One_nat_def Suc_leI \<open>\<forall>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M} \<noteq> {}\<close> card_gt_0_iff)
+    by (metis (no_types, lifting) One_nat_def Suc_leI \<open>\<forall>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M} \<noteq> {}\<close> card_gt_0_iff)
   then have "sum (\<lambda> C. card (?not_in_M C)) ?comp_out_empty \<ge> card ?comp_out_empty"
     by (metis (no_types, lifting) card_eq_sum sum_mono)
 
   have "finite ?comp_out_empty" 
-    using \<open>finite (diff_odd_components E X)\<close> by auto
+    using \<open>finite (odd_comps_in_diff E X)\<close> by auto
   have "\<forall>C \<in> ?comp_out_empty. finite (?not_in_M C)" 
-    using \<open>\<forall>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. finite {v \<in> C. v \<notin> Vs M}\<close> by blast
+    using \<open>\<forall>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. finite {v \<in> C. v \<notin> Vs M}\<close> by blast
   have "\<forall> C1 \<in> ?comp_out_empty. \<forall> C2 \<in> ?comp_out_empty. C1 \<noteq> C2 \<longrightarrow> ?not_in_M C1 \<inter> ?not_in_M C2 = {}"
 
     by (metis (no_types, lifting) diff_component_disjoint disjoint_iff_not_equal mem_Collect_eq)
@@ -207,7 +208,7 @@ proof -
   then have "sum (\<lambda> C. card (?not_in_M C)) ?comp_out_empty = 
       card  (\<Union>C \<in> ?comp_out_empty. (?not_in_M C))"
     using union_card_is_sum[of ?comp_out_empty ?not_in_M] 
-    using \<open>\<forall>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. finite {v \<in> C. v \<notin> Vs M}\<close> \<open>finite {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by blast
+    using \<open>\<forall>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. finite {v \<in> C. v \<notin> Vs M}\<close> \<open>finite {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by blast
 
   have "(\<Union>C \<in> ?comp_out_empty. (?not_in_M C)) = (?not_in_M (\<Union>C \<in> ?comp_out_empty. C))"
     apply safe
@@ -218,66 +219,66 @@ proof -
   have "(\<Union>C \<in> ?comp_out_empty. C) \<subseteq> Vs E" 
     by (metis (mono_tags, lifting) SUP_least mem_Collect_eq odd_components_subset_vertices)
   have "(?not_in_M (\<Union>C \<in> ?comp_out_empty. C)) \<subseteq> ?not_in_M (Vs E)" 
-    using \<open>(\<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C) \<subseteq> Vs E\<close> by auto
+    using \<open>(\<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C) \<subseteq> Vs E\<close> by auto
 
   have "?not_in_M (Vs E)\<subseteq> Vs E" by blast
   then have "finite (?not_in_M (Vs E))" 
     by (meson assms(1) finite_subset)
   then have "card (?not_in_M (\<Union>C \<in> ?comp_out_empty. C)) \<le> card (?not_in_M (Vs E))"
-    using \<open>{v \<in> \<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M} \<subseteq> {v \<in> Vs E. v \<notin> Vs M}\<close> card_mono by blast
+    using \<open>{v \<in> \<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M} \<subseteq> {v \<in> Vs E. v \<notin> Vs M}\<close> card_mono by blast
   have "card (?not_in_M (Vs E)) = card (Vs E - Vs M)" 
     by (metis  set_diff_eq) 
   have "card (Vs E - Vs M) = card (Vs E) - card (Vs M)" 
     by (meson Vs_subset \<open>M \<subseteq> E\<close> \<open>finite (Vs M)\<close> card_Diff_subset)
 
   then have "card ?comp_out_empty + card (Vs M) \<le> card (Vs E)" 
-    by (metis (no_types, lifting) Nat.le_diff_conv2 Vs_subset \<open>(\<Sum>C | C \<in> diff_odd_components E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {v \<in> C. v \<notin> Vs M}) = card (\<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M})\<close> \<open>(\<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M}) = {v \<in> \<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M}\<close> \<open>M \<subseteq> E\<close> \<open>card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} \<le> (\<Sum>C | C \<in> diff_odd_components E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {v \<in> C. v \<notin> Vs M})\<close> \<open>card {v \<in> Vs E. v \<notin> Vs M} = card (Vs E - Vs M)\<close> \<open>card {v \<in> \<Union>C\<in>{C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M} \<le> card {v \<in> Vs E. v \<notin> Vs M}\<close> assms(1) card_mono le_trans)
+    by (metis (no_types, lifting) Nat.le_diff_conv2 Vs_subset \<open>(\<Sum>C | C \<in> odd_comps_in_diff E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {v \<in> C. v \<notin> Vs M}) = card (\<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M})\<close> \<open>(\<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. {v \<in> C. v \<notin> Vs M}) = {v \<in> \<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M}\<close> \<open>M \<subseteq> E\<close> \<open>card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}} \<le> (\<Sum>C | C \<in> odd_comps_in_diff E X \<and> {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}. card {v \<in> C. v \<notin> Vs M})\<close> \<open>card {v \<in> Vs E. v \<notin> Vs M} = card (Vs E - Vs M)\<close> \<open>card {v \<in> \<Union>C\<in>{C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}. C. v \<notin> Vs M} \<le> card {v \<in> Vs E. v \<notin> Vs M}\<close> assms(1) card_mono le_trans)
   then have "card (Vs M) + card ?QX - card X \<le> card (Vs E)" 
-    using \<open>card (diff_odd_components E X) - card X \<le> card {C \<in> diff_odd_components E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by linarith
-  then show " 2 * (card M) + card (diff_odd_components E X) - card X \<le> card (Vs E)" 
+    using \<open>card (odd_comps_in_diff E X) - card X \<le> card {C \<in> odd_comps_in_diff E X. {e \<in> M. \<exists>x y. e = {x, y} \<and> y \<in> C \<and> x \<in> X} = {}}\<close> by linarith
+  then show " 2 * (card M) + card (odd_comps_in_diff E X) - card X \<le> card (Vs E)" 
     by (metis \<open>finite (Vs M)\<close> assms(1) assms(2) matching_vertices_double_size subset_iff)
 qed
 
 lemma vertices_sum_in_components:
-  shows "(\<Union>C \<in> (diff_odd_components E X). C) \<subseteq> (Vs E - X)"
+  shows "(\<Union>C \<in> (odd_comps_in_diff E X). C) \<subseteq> (Vs E - X)"
   apply safe
    apply (meson in_mono odd_components_subset_vertices)
-  using diff_odd_components_not_in_X by blast
+  using odd_comps_in_diff_not_in_X by blast
 
 
 lemma diff_odd_comps_card:
   assumes "graph_invar E"
-  shows "card (diff_odd_components E X) \<le> card (Vs E - X)"
+  shows "card (odd_comps_in_diff E X) \<le> card (Vs E - X)"
 proof -
-  have "\<forall>C \<in> (diff_odd_components E X). \<exists>c \<in> (Vs E - X). connected_component (graph_diff E X) c = C" 
-    by (meson diff_odd_components_are_components_elim)
+  have "\<forall>C \<in> (odd_comps_in_diff E X). \<exists>c \<in> (Vs E - X). connected_component (graph_diff E X) c = C" 
+    by (meson odd_comps_in_diff_are_componentsOb)
 
-  have "(\<Union>C \<in> (diff_odd_components E X). C) \<subseteq> (Vs E - X)" 
+  have "(\<Union>C \<in> (odd_comps_in_diff E X). C) \<subseteq> (Vs E - X)" 
     by (metis vertices_sum_in_components)
-  then have "card (\<Union>C \<in> (diff_odd_components E X). C) \<le> card (Vs E - X)" 
+  then have "card (\<Union>C \<in> (odd_comps_in_diff E X). C) \<le> card (Vs E - X)" 
     by (simp add: assms card_mono)
   
-  have "card (\<Union>C \<in> (diff_odd_components E X). C) = (\<Sum>C \<in> (diff_odd_components E X). card C)" 
+  have "card (\<Union>C \<in> (odd_comps_in_diff E X). C) = (\<Sum>C \<in> (odd_comps_in_diff E X). card C)" 
     by (smt (verit, ccfv_SIG) assms card_eq_0_iff diff_component_disjoint diff_components_finite diff_odd_compoenent_has_odd_card odd_card_imp_not_empty sum.cong union_card_is_sum)
 
-  have "\<forall>C \<in> (diff_odd_components E X). card C \<ge> 1" 
+  have "\<forall>C \<in> (odd_comps_in_diff E X). card C \<ge> 1" 
     using odd_components_nonempty 
     by (metis One_nat_def Suc_leI card_eq_0_iff card_gt_0_iff diff_odd_compoenent_has_odd_card odd_card_imp_not_empty)
-  then have "(\<Sum>C \<in> (diff_odd_components E X). card C) \<ge> card (diff_odd_components E X)"
+  then have "(\<Sum>C \<in> (odd_comps_in_diff E X). card C) \<ge> card (odd_comps_in_diff E X)"
     by (metis card_eq_sum sum_mono)
 
-  then show "card (diff_odd_components E X) \<le> card (Vs E - X)" 
-    using \<open>card (\<Union>C\<in>diff_odd_components E X. C) = sum card (diff_odd_components E X)\<close> \<open>card (\<Union>C\<in>diff_odd_components E X. C) \<le> card (Vs E - X)\<close> by linarith
+  then show "card (odd_comps_in_diff E X) \<le> card (Vs E - X)" 
+    using \<open>card (\<Union>C\<in>odd_comps_in_diff E X. C) = sum card (odd_comps_in_diff E X)\<close> \<open>card (\<Union>C\<in>odd_comps_in_diff E X. C) \<le> card (Vs E - X)\<close> by linarith
 qed
 
 
 lemma construct_perfect_matching_with_new_vertices:
   assumes "graph_invar E"
   assumes "X \<subseteq> Vs E"
-  assumes "\<forall>Y \<subseteq> Vs E. card (diff_odd_components E X) - card X \<ge> 
-          card (diff_odd_components E Y) - card Y"
+  assumes "\<forall>Y \<subseteq> Vs E. card (odd_comps_in_diff E X) - card X \<ge> 
+          card (odd_comps_in_diff E Y) - card Y"
   assumes "finite A" 
-  assumes "card A = card (diff_odd_components E X) - card X"
+  assumes "card A = card (odd_comps_in_diff E X) - card X"
   assumes "A \<inter> Vs E = {}" 
 shows "\<exists>M. perfect_matching (E \<union> {{x, y}| x y. x \<in> Vs E \<and> y \<in> A}) M"  
 proof(cases "E={}")
@@ -293,14 +294,14 @@ next
   case False
   then have "E \<noteq> {}" by auto
   let ?H = "(E \<union> {{x, y}| x y. x \<in> Vs E \<and> y \<in> A})" 
-  let ?k = "card (diff_odd_components E X) - card X" 
+  let ?k = "card (odd_comps_in_diff E X) - card X" 
 
   show "\<exists>M. perfect_matching (E \<union> {{x, y}| x y. x \<in> Vs E \<and> y \<in> A}) M"
-  proof(cases "card (diff_odd_components E X) - card X \<le> 0")
+  proof(cases "card (odd_comps_in_diff E X) - card X \<le> 0")
     case True
-    then have "\<forall>Y \<subseteq> Vs E. card (diff_odd_components E Y) - card Y \<le> 0" 
+    then have "\<forall>Y \<subseteq> Vs E. card (odd_comps_in_diff E Y) - card Y \<le> 0" 
       by (metis assms(3) bot_nat_0.extremum_uniqueI) 
-    then have "\<forall>Y \<subseteq> Vs E. card (diff_odd_components E Y) \<le> card Y" by auto
+    then have "\<forall>Y \<subseteq> Vs E. card (odd_comps_in_diff E Y) \<le> card Y" by auto
     then have "tutte_condition E" by auto
     have "card A = 0" 
     using True assms(5) by force
@@ -311,10 +312,10 @@ next
     using \<open>tutte_condition E\<close> assms(1) by fastforce
 next
   case False
-  assume " \<not> card (diff_odd_components E X) - card X \<le> 0"
-  then have "card (diff_odd_components E X) - card X > 0" 
+  assume " \<not> card (odd_comps_in_diff E X) - card X \<le> 0"
+  then have "card (odd_comps_in_diff E X) - card X > 0" 
     by (meson not_le)
-  then have "card (diff_odd_components E X) \<ge> card X" 
+  then have "card (odd_comps_in_diff E X) \<ge> card X" 
     by simp
   have "Vs ?H = Vs E \<union> A"
   proof(safe)
@@ -368,18 +369,18 @@ qed (simp add: Vs_def)
     assume "\<nexists>M. perfect_matching ?H M" 
     then have "\<not> tutte_condition ?H" 
       by (simp add: \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> tutte)
-    then have "\<exists>Y \<subseteq> Vs ?H. card (diff_odd_components ?H Y) > card Y"
+    then have "\<exists>Y \<subseteq> Vs ?H. card (odd_comps_in_diff ?H Y) > card Y"
       by (meson le_less_linear tutte_condition_def)
-    then obtain Y where Y_subs:"Y \<subseteq> Vs ?H \<and> card (diff_odd_components ?H Y) > card Y" by auto
+    then obtain Y where Y_subs:"Y \<subseteq> Vs ?H \<and> card (odd_comps_in_diff ?H Y) > card Y" by auto
     have "even ?k = even (card (Vs E))" using diff_odd_component_parity'[of E X]
-      using `card (diff_odd_components E X) \<ge> card X`
+      using `card (odd_comps_in_diff E X) \<ge> card X`
       using assms(1) assms(2) by blast
     then have "even (card (Vs E) + ?k)" by auto
     then have "even (card (Vs ?H)) = even (card (Vs E) + ?k)"
       using `card (Vs ?H) = card (Vs E) + ?k` 
       by presburger
     have "even (card (Vs ?H))" 
-      using \<open>even (card (Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}))) = even (card (Vs E) + (card (diff_odd_components E X) - card X))\<close> \<open>even (card (Vs E) + (card (diff_odd_components E X) - card X))\<close> by blast
+      using \<open>even (card (Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}))) = even (card (Vs E) + (card (odd_comps_in_diff E X) - card X))\<close> \<open>even (card (Vs E) + (card (odd_comps_in_diff E X) - card X))\<close> by blast
     
     have "Vs ?H \<in> connected_components ?H"
     proof -
@@ -456,8 +457,8 @@ qed
     show "{Vs ?H} \<subseteq> connected_components ?H" 
       using \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) \<in> connected_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> by blast
   qed
-  have "diff_odd_components ?H {} = {}" 
-    by (smt (verit) Collect_empty_eq Diff_disjoint Diff_eq_empty_iff Odd_components.diff_odd_components_are_components Un_Diff_Int Y_subs \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) \<in> connected_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>even (card (Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})))\<close> boolean_algebra_cancel.sup0 connected_comp_has_vert connected_components_member_eq graph_diff_empty)
+  have "odd_comps_in_diff ?H {} = {}" 
+    by (smt (verit) Collect_empty_eq Diff_disjoint Diff_eq_empty_iff Odd_components.odd_comps_in_diff_are_components Un_Diff_Int Y_subs \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) \<in> connected_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>even (card (Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})))\<close> boolean_algebra_cancel.sup0 connected_comp_has_vert connected_components_member_eq graph_diff_empty)
   have "\<exists>y \<in> Vs E. y \<notin> Y"
       proof(rule ccontr)
         assume "\<not> (\<exists>y\<in>Vs E. y \<notin> Y)" 
@@ -465,10 +466,10 @@ qed
         then have "Vs E \<subseteq> Y" by auto
         then have "card (Vs E) \<le> card Y" 
           by (meson Y_subs \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> card_mono finite_subset)
-        then have "card (diff_odd_components ?H Y) > card (Vs E)" 
+        then have "card (odd_comps_in_diff ?H Y) > card (Vs E)" 
           using Y_subs by linarith 
         then show False 
-          by (smt (verit, del_insts) Diff_disjoint Int_commute Nat.le_diff_conv2 Un_Diff_Int Un_Int_eq(1) Y_subs \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> \<open>card (Vs E) \<le> card Y\<close> \<open>card (diff_odd_components E X) - card X \<le> card (Vs E)\<close> \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> add_le_mono assms(1) assms(4) assms(5) assms(6) card_Un_Int diff_add_inverse2 diff_le_self diff_odd_comps_card finite_Diff finite_subset le_trans not_less subset_Un_eq)
+          by (smt (verit, del_insts) Diff_disjoint Int_commute Nat.le_diff_conv2 Un_Diff_Int Un_Int_eq(1) Y_subs \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> \<open>card (Vs E) \<le> card Y\<close> \<open>card (odd_comps_in_diff E X) - card X \<le> card (Vs E)\<close> \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> add_le_mono assms(1) assms(4) assms(5) assms(6) card_Un_Int diff_add_inverse2 diff_le_self diff_odd_comps_card finite_Diff finite_subset le_trans not_less subset_Un_eq)
       qed
      then obtain y where "y \<in> Vs E \<and> y \<notin> Y" using `\<exists>y \<in> Vs E. y \<notin> Y` by auto
     
@@ -485,7 +486,7 @@ qed
         using \<open>a \<in> A \<and> a \<notin> Y\<close> \<open>y \<in> Vs E \<and> y \<notin> Y\<close> by blast
       then have "{y, a} \<in> ?H" by auto
       then have "{y, a} \<in> graph_diff ?H Y" 
-        by (simp add: \<open>a \<in> A \<and> a \<notin> Y\<close> \<open>y \<in> Vs E \<and> y \<notin> Y\<close> graph_diff_intro)
+        by (simp add: \<open>a \<in> A \<and> a \<notin> Y\<close> \<open>y \<in> Vs E \<and> y \<notin> Y\<close> graph_diffI)
       then have "a \<in> Vs (graph_diff ?H Y)" by auto
 
 
@@ -502,7 +503,7 @@ qed
           have "{x, a} \<inter> Y = {}" using \<open>a \<in> A \<and> a \<notin> Y\<close> \<open>x \<in> Vs ?H - Y\<close> 
             by blast
   then show ?thesis 
-    by (metis (no_types, lifting) \<open>{x, a} \<in> E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}\<close> graph_diff_intro insert_commute vertices_edges_in_same_component)
+    by (metis (no_types, lifting) \<open>{x, a} \<in> E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}\<close> graph_diffI insert_commute vertices_edges_in_same_component)
 
 next
   case False
@@ -513,9 +514,10 @@ next
   then have "{x, y} \<in> ?H" 
     by blast
    have "{x, y} \<inter> Y = {}" 
-     by (meson DiffD2 \<open>x \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y\<close> \<open>{y, a} \<in> graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y\<close> graph_diff_elim insert_disjoint(1))
+     using \<open>x \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y\<close> \<open>y \<in> Vs E \<and> y \<notin> Y\<close> by blast
    then have "{x, y} \<in> graph_diff ?H Y" 
-     using \<open>{x, y} \<in> E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}\<close> by blast
+     using \<open>{x, y} \<in> E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}\<close>
+     by (meson graph_diffI)
   then show ?thesis 
     by (metis (no_types, lifting) \<open>{y, a} \<in> graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y\<close> connected_components_member_sym connected_components_member_trans vertices_edges_in_same_component)
 
@@ -553,41 +555,41 @@ qed
       have "(odd_components (graph_diff ?H Y)) \<subseteq> connected_components (graph_diff ?H Y)" 
         by (simp add: components_is_union_even_and_odd)
 
-      have "singleton_in_diff ?H Y = {}" 
+      have "singl_in_diff ?H Y = {}" 
       proof(rule ccontr)
-        assume " singleton_in_diff ?H Y \<noteq> {}"
-        then obtain v where "{v} \<in> singleton_in_diff ?H Y \<and> v \<in> Vs ?H \<and> v \<notin> Y \<and> v \<notin> Vs (graph_diff ?H Y)"
-          by (smt (verit) empty_subsetI singleton_in_diff_elim subsetI subset_antisym)
+        assume " singl_in_diff ?H Y \<noteq> {}"
+        then obtain v where "{v} \<in> singl_in_diff ?H Y \<and> v \<in> Vs ?H \<and> v \<notin> Y \<and> v \<notin> Vs (graph_diff ?H Y)"
+          by (smt (verit) empty_subsetI singl_in_diffE subsetI subset_antisym)
         then have "v \<in> connected_component (graph_diff ?H Y) a" 
           by (simp add: \<open>\<forall>x\<in>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y. x \<in> connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a\<close>)
         then show False 
-          by (smt (z3) Diff_iff Diff_insert_absorb \<open>\<forall>x\<in>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y. x \<in> connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a\<close> \<open>a \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y\<close> \<open>a \<in> Vs (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y)\<close> \<open>{v} \<in> singleton_in_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y \<and> v \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) \<and> v \<notin> Y \<and> v \<notin> Vs (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y)\<close> connected_components_member_eq insertCI singleton_in_diff_is_component)
+          by (smt (z3) Diff_iff Diff_insert_absorb \<open>\<forall>x\<in>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y. x \<in> connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a\<close> \<open>a \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) - Y\<close> \<open>a \<in> Vs (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y)\<close> \<open>{v} \<in> singl_in_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y \<and> v \<in> Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) \<and> v \<notin> Y \<and> v \<notin> Vs (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y)\<close> connected_components_member_eq insertCI singl_in_diff_is_component)
       qed
-      then have "(odd_components (graph_diff ?H Y)) = (diff_odd_components ?H Y)" 
-        by (simp add: diff_odd_components_def)
+      then have "(odd_components (graph_diff ?H Y)) = (odd_comps_in_diff ?H Y)" 
+        by (simp add: odd_comps_in_diff_def)
 
-      then have "(diff_odd_components ?H Y) \<subseteq> {connected_component (graph_diff ?H Y) a}" 
+      then have "(odd_comps_in_diff ?H Y) \<subseteq> {connected_component (graph_diff ?H Y) a}" 
         using \<open>connected_components (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) = {connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a}\<close> \<open>odd_components (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) \<subseteq> connected_components (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y)\<close> by presburger
-      then have "card (diff_odd_components ?H Y) \<le> card {connected_component (graph_diff ?H Y) a}" 
+      then have "card (odd_comps_in_diff ?H Y) \<le> card {connected_component (graph_diff ?H Y) a}" 
         by (meson card_mono finite.emptyI finite.insertI)
-      then have "card (diff_odd_components ?H Y) \<le> 1" 
+      then have "card (odd_comps_in_diff ?H Y) \<le> 1" 
         by force
       show False
-      proof(cases "card (diff_odd_components ?H Y) = 1")
+      proof(cases "card (odd_comps_in_diff ?H Y) = 1")
 case True
 
   then have "card Y = 0"  
     using Y_subs by linarith
   then have "Y = {}" 
     by (meson Y_subs \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> card_eq_0_iff rev_finite_subset)
-  then have "(diff_odd_components ?H Y) = {}"
-    using \<open>diff_odd_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) {} = {}\<close> by fastforce
+  then have "(odd_comps_in_diff ?H Y) = {}"
+    using \<open>odd_comps_in_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) {} = {}\<close> by fastforce
   then show ?thesis 
     using Y_subs by auto
 next
 case False
   then show ?thesis 
-    by (smt (z3) One_nat_def Y_subs \<open>diff_odd_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y \<subseteq> {connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a}\<close> card.empty card.insert finite.emptyI insert_absorb le0 not_less subset_singleton_iff)
+    by (smt (z3) One_nat_def Y_subs \<open>odd_comps_in_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y \<subseteq> {connected_component (graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y) a}\<close> card.empty card.insert finite.emptyI insert_absorb le0 not_less subset_singleton_iff)
 
 qed
 qed
@@ -595,21 +597,21 @@ qed
   then have "graph_diff ?H Y = graph_diff E Y" unfolding graph_diff_def
    proof(safe) qed (blast)
 
-   have "singleton_in_diff ?H Y = singleton_in_diff E Y" 
-     unfolding singleton_in_diff_def
+   have "singl_in_diff ?H Y = singl_in_diff E Y" 
+     unfolding singl_in_diff_def
      apply safe
      
      using \<open>A \<subseteq> Y\<close> \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> \<open>graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = graph_diff E Y\<close> subsetD apply fastforce
      
      by (simp add: \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> \<open>graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = graph_diff E Y\<close>)
 
-   then have "diff_odd_components ?H Y = diff_odd_components E Y" 
-     by (simp add: \<open>graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = graph_diff E Y\<close> diff_odd_components_def)
+   then have "odd_comps_in_diff ?H Y = odd_comps_in_diff E Y" 
+     by (simp add: \<open>graph_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = graph_diff E Y\<close> odd_comps_in_diff_def)
 
-   have "diff_odd_components E (Y \<inter> Vs E) = diff_odd_components E Y" 
-     by (simp add: diff_odd_components_same_inter_vertices assms(1))
-   then have "card (diff_odd_components E (Y \<inter> Vs E)) > card Y" 
-     using Y_subs \<open>diff_odd_components (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = diff_odd_components E Y\<close> by auto
+   have "odd_comps_in_diff E (Y \<inter> Vs E) = odd_comps_in_diff E Y" 
+     by (simp add: odd_comps_in_diff_same_inter_vertices assms(1))
+   then have "card (odd_comps_in_diff E (Y \<inter> Vs E)) > card Y" 
+     using Y_subs \<open>odd_comps_in_diff (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) Y = odd_comps_in_diff E Y\<close> by auto
 
    have "Y = (Y \<inter> Vs E) \<union> A" 
      by (metis Un_Int_assoc_eq Y_subs \<open>A \<subseteq> Y\<close> \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> le_iff_inf)
@@ -617,9 +619,9 @@ qed
      by (metis Int_commute Un_Int_eq(2) assms(1) assms(4) assms(6) card_Un_disjoint finite_Int inf_assoc)
    then have "card Y = card (Y \<inter> Vs E) + ?k" 
      using assms(5) by presburger
-   then have "card (diff_odd_components E (Y \<inter> Vs E)) > card (Y \<inter> Vs E) + ?k" 
-     using \<open>card Y < card (diff_odd_components E (Y \<inter> Vs E))\<close> by presburger
-   then have "card (diff_odd_components E (Y \<inter> Vs E)) - card (Y \<inter> Vs E) > ?k" by auto
+   then have "card (odd_comps_in_diff E (Y \<inter> Vs E)) > card (Y \<inter> Vs E) + ?k" 
+     using \<open>card Y < card (odd_comps_in_diff E (Y \<inter> Vs E))\<close> by presburger
+   then have "card (odd_comps_in_diff E (Y \<inter> Vs E)) - card (Y \<inter> Vs E) > ?k" by auto
 
    then show False 
      by (meson Int_lower2 assms(3) not_less)
@@ -632,13 +634,13 @@ lemma  berge_formula2:
   assumes "graph_invar E"
   assumes "graph_matching E M"
   assumes "X \<subseteq> Vs E"
- assumes "\<forall>Y \<subseteq> Vs E. int (card (diff_odd_components E X)) - int (card X) \<ge> 
-          int (card (diff_odd_components E Y)) - int (card Y)" 
+ assumes "\<forall>Y \<subseteq> Vs E. int (card (odd_comps_in_diff E X)) - int (card X) \<ge> 
+          int (card (odd_comps_in_diff E Y)) - int (card Y)" 
  assumes "\<forall>M'. graph_matching E M' \<longrightarrow> card M \<ge> card M'"
 assumes "finite A" 
-  assumes "card A = card (diff_odd_components E X) - card X"
+  assumes "card A = card (odd_comps_in_diff E X) - card X"
   assumes "A \<inter> Vs E = {}" 
-  shows " 2 * (card M) + card (diff_odd_components E X) - card X \<ge> card (Vs E)"
+  shows " 2 * (card M) + card (odd_comps_in_diff E X) - card X \<ge> card (Vs E)"
 proof(cases "E={}")
   case True
   have "Vs E = {}" using True 
@@ -652,58 +654,58 @@ next
   case False
   then have "E \<noteq> {}" by auto
  let ?H = "(E \<union> {{x, y}| x y. x \<in> Vs E \<and> y \<in> A})" 
-  let ?k = "card (diff_odd_components E X) - card X"
+  let ?k = "card (odd_comps_in_diff E X) - card X"
 
   show ?thesis
-  proof(cases "card (diff_odd_components E X) \<le> card X")
+  proof(cases "card (odd_comps_in_diff E X) \<le> card X")
     case True
 
-    then have "\<forall>Y \<subseteq> Vs E. card (diff_odd_components E Y) \<le> card Y" 
+    then have "\<forall>Y \<subseteq> Vs E. card (odd_comps_in_diff E Y) \<le> card Y" 
       
       by (smt (verit, ccfv_threshold) assms(4) of_nat_le_iff)
     then have "tutte_condition E" by auto
     then obtain M' where "perfect_matching E M'" using tutte
       using assms(1) by auto
     then have "graph_matching E M'" 
-      by (meson perfect_matching_elim(2) perfect_matching_elim(3))
+      by (meson perfect_matchingE perfect_matchingE)
     then have "card M' \<le> card M" 
       by (simp add: assms(5))
     then have "card (Vs M') \<le> card (Vs M)" 
       by (smt (verit, del_insts) Vs_subset \<open>perfect_matching E M'\<close> add_le_mono assms(2) finite_subset matching_vertices_double_size mult_2 perfect_matching_def subset_iff)
     then have "card (Vs M) \<ge> card (Vs E)" 
-      by (metis \<open>perfect_matching E M'\<close> perfect_matching_elim(4))
+      by (metis \<open>perfect_matching E M'\<close> perfect_matchingE)
     have "Vs M \<subseteq> Vs E" 
       by (simp add: Vs_subset assms(2))
     then have "Vs M =  Vs E" 
       by (metis Diff_eq_empty_iff \<open>card (Vs E) \<le> card (Vs M)\<close> assms(1) card.empty card_Diff_subset card_gt_0_iff diff_is_0_eq finite_Diff finite_subset subset_antisym)
     then have "perfect_matching E M" 
-      by (simp add: assms(1) assms(2) perfect_matching_intro)
+      by (simp add: assms(1) assms(2) perfect_matchingI)
     have "2 * card M = card (Vs E)" 
       by (metis \<open>Vs M = Vs E\<close> assms(1) assms(2) matching_vertices_double_size subset_iff)
 
-   have "\<forall>x \<in> (Vs E). card {x} \<ge> card (diff_odd_components E {x})"
+   have "\<forall>x \<in> (Vs E). card {x} \<ge> card (odd_comps_in_diff E {x})"
      
-     by (metis Int_lower2 \<open>\<forall>Y\<subseteq>Vs E. card (diff_odd_components E Y) \<le> card Y\<close> assms(8) insert_subset)
-   then  have "\<forall>x \<in> (Vs E). even (card {x} - card (diff_odd_components E {x}))"
+     by (metis Int_lower2 \<open>\<forall>Y\<subseteq>Vs E. card (odd_comps_in_diff E Y) \<le> card Y\<close> assms(8) insert_subset)
+   then  have "\<forall>x \<in> (Vs E). even (card {x} - card (odd_comps_in_diff E {x}))"
      by (metis Int_lower2 \<open>2 * card M = card (Vs E)\<close> assms(1) assms(8) diff_odd_component_parity dvd_triv_left insert_subset)
 
    
-    then have "\<forall>x \<in> (Vs E).card (diff_odd_components E {x}) = 1"
-      by (metis One_nat_def Suc_leI \<open>\<forall>x\<in>Vs E. card (diff_odd_components E {x}) \<le> card {x}\<close> antisym_conv card.empty card.insert dvd_diffD empty_iff finite.emptyI not_less odd_card_imp_not_empty odd_one zero_order(2))
+    then have "\<forall>x \<in> (Vs E).card (odd_comps_in_diff E {x}) = 1"
+      by (metis One_nat_def Suc_leI \<open>\<forall>x\<in>Vs E. card (odd_comps_in_diff E {x}) \<le> card {x}\<close> antisym_conv card.empty card.insert dvd_diffD empty_iff finite.emptyI not_less odd_card_imp_not_empty odd_one zero_order(2))
     then have "\<forall>x \<in> (Vs E). barrier E {x}"
       by (metis barrier_def insert_not_empty is_singleton_altdef is_singleton_def)
     then have "\<exists> X \<subseteq> Vs E. barrier E X" 
       by (metis False Vs_def assms(1) bot.extremum ex_in_conv insert_subset vs_member)
-    then obtain X' where "X' \<subseteq> Vs E \<and> card (diff_odd_components E X') = card X'"
+    then obtain X' where "X' \<subseteq> Vs E \<and> card (odd_comps_in_diff E X') = card X'"
       by (meson Tutte_theorem3.barrier_def)
-    have "card (diff_odd_components E X) - card X = 0" 
+    have "card (odd_comps_in_diff E X) - card X = 0" 
       using True diff_is_0_eq' by blast 
     then show ?thesis 
       using \<open>2 * card M = card (Vs E)\<close> assms(4) by force
   next
     case False
  
-  have "card (diff_odd_components E X) \<ge> card X" 
+  have "card (odd_comps_in_diff E X) \<ge> card X" 
     by (meson False le_cases)
  have "Vs ?H = Vs E \<union> A"
   proof(safe)
@@ -750,11 +752,11 @@ qed (simp add: Vs_def)
   obtain Mh where Mh:"perfect_matching ?H Mh" 
     using  construct_perfect_matching_with_new_vertices[of E X A] 
     using assms(1) assms(3) assms(4) assms(6) assms(7) assms(8) 
-    by (smt (verit, best) \<open>card X \<le> card (diff_odd_components E X)\<close> diff_add_inverse le_Suc_ex le_diff_conv of_nat_add of_nat_le_iff)
+    by (smt (verit, best) \<open>card X \<le> card (odd_comps_in_diff E X)\<close> diff_add_inverse le_Suc_ex le_diff_conv of_nat_add of_nat_le_iff)
   have "matching Mh" 
-    using Mh perfect_matching_elim(2) by blast
+    using Mh perfect_matchingE by blast
   have "Vs Mh = Vs ?H" 
-    by (simp add: Mh perfect_matching_elim(4))
+    by (metis (no_types, lifting) Mh perfect_matchingE)
 
   have "\<forall>a \<in> Vs ?H. \<exists>! e \<in> Mh. a \<in> e" 
     by (metis (no_types, lifting) \<open>Vs Mh = Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>matching Mh\<close> matching_def2)
@@ -764,7 +766,7 @@ qed (simp add: Vs_def)
   let ?edges_A = " {e. e \<in> Mh \<and> e \<inter> A \<noteq> {}}"
   have "?edges_A \<subseteq> Mh" by auto
   then have "card ((Vs ?edges_A) \<inter> A) = sum (\<lambda> e. card (e \<inter> A)) (?edges_A)" 
-    using werew2[of Mh ?edges_A] `matching Mh` 
+    using matching_int_card_is_sum[of Mh ?edges_A] `matching Mh` 
     using \<open>Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}) = Vs E \<union> A\<close> \<open>Vs Mh = Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> assms(1) assms(6) by fastforce
 
   have "((Vs ?edges_A) \<inter> A) = A"
@@ -787,7 +789,7 @@ qed
     then have "card (e \<inter> A) \<ge> 1" 
       by (simp add: Suc_leI assms(6) card_gt_0_iff)
 then have "e \<in> ?H" 
-        using Mh \<open>e \<in> {e \<in> Mh. e \<inter> A \<noteq> {}}\<close> perfect_matching_elim(3) by auto
+        using Mh \<open>e \<in> {e \<in> Mh. e \<inter> A \<noteq> {}}\<close> perfect_matchingE by auto
     have "card (e \<inter> A) \<noteq> 2" 
     proof
       assume "card (e \<inter> A) = 2" 
@@ -831,7 +833,7 @@ then have "e \<in> ?H"
     fix e
     assume "e \<in> Mh" "e \<inter> A = {}" 
     have "e \<in> ?H" 
-      using Mh \<open>e \<in> Mh\<close> perfect_matching_elim(3) by auto
+      using Mh \<open>e \<in> Mh\<close> perfect_matchingE by auto
     have "e \<notin> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A}" 
       using \<open>e \<inter> A = {}\<close> by blast
     then show "e \<in> E" 
@@ -850,17 +852,17 @@ then have "e \<in> ?H"
   then have "2* card M + ?k \<ge> 2*card Mh - card A" using `2* card M + card A\<ge> 2*card Mh - card A`
     by (metis assms(7))
   also have "2*card Mh - card A = card (Vs Mh) - card A" 
-    by (metis (no_types, lifting) Mh \<open>Vs Mh = Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>matching Mh\<close> matching_vertices_double_size perfect_matching_elim(3) subsetD)
+    by (metis (no_types, lifting) Mh \<open>Vs Mh = Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>graph_invar (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> \<open>matching Mh\<close> matching_vertices_double_size perfect_matchingE subsetD)
   also have "card (Vs Mh) - card A = card (Vs ?H) - card A" 
     using \<open>Vs Mh = Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})\<close> by presburger
   also  have "card (Vs ?H) - card A = card(Vs E)" 
     using \<open>card (Vs (E \<union> {{x, y} |x y. x \<in> Vs E \<and> y \<in> A})) = card (Vs E) + card A\<close> by presburger
-  also have "2 * card M + (card (diff_odd_components E X) - card X) = 
-      2 * card M +  card (diff_odd_components E X) - card X"
-      using `card (diff_odd_components E X) \<ge> card X` 
+  also have "2 * card M + (card (odd_comps_in_diff E X) - card X) = 
+      2 * card M +  card (odd_comps_in_diff E X) - card X"
+      using `card (odd_comps_in_diff E X) \<ge> card X` 
     by simp
   finally  show "card (Vs E)
-    \<le> 2 * card M + card (diff_odd_components E X) - card X" 
+    \<le> 2 * card M + card (odd_comps_in_diff E X) - card X" 
     by blast
 qed
 qed
@@ -877,10 +879,10 @@ begin
 lemma  berge_formula2':
   assumes "graph_matching E M"
   assumes "X \<subseteq> Vs E"
- assumes "\<forall>Y \<subseteq> Vs E. int (card (diff_odd_components E X)) - int (card X) \<ge> 
-          int (card (diff_odd_components E Y)) - int (card Y)" 
+ assumes "\<forall>Y \<subseteq> Vs E. int (card (odd_comps_in_diff E X)) - int (card X) \<ge> 
+          int (card (odd_comps_in_diff E Y)) - int (card Y)" 
  assumes "\<forall>M'. graph_matching E M' \<longrightarrow> card M \<ge> card M'" 
-  shows " 2 * (card M) + card (diff_odd_components E X) - card X \<ge> card (Vs E)"
+  shows " 2 * (card M) + card (odd_comps_in_diff E X) - card X \<ge> card (Vs E)"
 proof -
   obtain A' where "A' = (\<Union>x\<in>Vs E. {(f x)})" 
     by simp
@@ -909,18 +911,18 @@ proof -
     then show False 
       by (metis IntD2 \<open>a \<in> A' \<inter> Vs E\<close> add_vertices_axioms add_vertices_def)
   qed
-  have " card (diff_odd_components E X)  \<le> card (Vs E)" 
+  have " card (odd_comps_in_diff E X)  \<le> card (Vs E)" 
     by (metis (no_types, lifting) assms(2) card_Diff_subset diff_le_self diff_odd_comps_card finite_subset graph order_trans)
-  then have " card (diff_odd_components E X) - card X  \<le> card (Vs E)" 
+  then have " card (odd_comps_in_diff E X) - card X  \<le> card (Vs E)" 
     by (meson diff_le_self dual_order.trans)
-  then have "card (diff_odd_components E X) - card X  \<le> card A'" 
+  then have "card (odd_comps_in_diff E X) - card X  \<le> card A'" 
     using \<open>card A' = card (Vs E)\<close> by presburger
   have "finite A'" 
     using \<open>A' = (\<Union>x\<in>Vs E. {f x})\<close> graph by blast
-  then obtain A where "A \<subseteq> A' \<and> (card (diff_odd_components E X) - card X = card A)" 
-    by (metis \<open>card (diff_odd_components E X) - card X \<le> card A'\<close> obtain_subset_with_card_n)
+  then obtain A where "A \<subseteq> A' \<and> (card (odd_comps_in_diff E X) - card X = card A)" 
+    by (metis \<open>card (odd_comps_in_diff E X) - card X \<le> card A'\<close> obtain_subset_with_card_n)
  
-  then show " 2 * (card M) + card (diff_odd_components E X) - card X \<ge> card (Vs E)"
+  then show " 2 * (card M) + card (odd_comps_in_diff E X) - card X \<ge> card (Vs E)"
     using berge_formula2[of E M X A] assms 
     by (smt (z3) \<open>A' \<inter> Vs E = {}\<close> \<open>finite A'\<close> disjoint_iff_not_equal finite_subset graph subsetD)
 qed
@@ -928,10 +930,10 @@ qed
 lemma  berge_formula:
   assumes "graph_matching E M"
   assumes "X \<subseteq> Vs E"
- assumes "\<forall>Y \<subseteq> Vs E. int (card (diff_odd_components E X)) - int (card X) \<ge> 
-          int (card (diff_odd_components E Y)) - int (card Y)" 
+ assumes "\<forall>Y \<subseteq> Vs E. int (card (odd_comps_in_diff E X)) - int (card X) \<ge> 
+          int (card (odd_comps_in_diff E Y)) - int (card Y)" 
  assumes "\<forall>M'. graph_matching E M' \<longrightarrow> card M \<ge> card M'" 
-  shows " 2 * (card M) + card (diff_odd_components E X) - card X = card (Vs E)"
+  shows " 2 * (card M) + card (odd_comps_in_diff E X) - card X = card (Vs E)"
   using berge_formula2'[of M X] 
   by (simp add: assms(1) assms(2) assms(3) assms(4) graph le_antisym left_uncoverred_matching)
 
