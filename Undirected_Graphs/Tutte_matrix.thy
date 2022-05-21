@@ -2540,7 +2540,7 @@ proof -
   obtain M where "perfect_matching E M" using assms 
     by blast
   then have "matching M" 
-    by auto
+    using perfect_matching_def by blast
   have "Vs M = UNIV" 
     by (metis \<open>perfect_matching E M\<close> perfect_matching_member univ)
   have "graph_invar M" 
@@ -2753,4 +2753,5 @@ lemma perfect_matching_iff_nonzero_det:
     tutte_matrix_axioms by blast
 
 
+end
 end
