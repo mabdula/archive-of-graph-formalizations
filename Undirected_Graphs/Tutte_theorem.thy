@@ -1,4 +1,4 @@
-theory Tutte_theorem3
+theory Tutte_theorem
   imports Odd_components Cardinality_sums
 begin
 
@@ -1859,7 +1859,7 @@ proof(induction "card (Vs E)" arbitrary: E rule: less_induct)
       fix C
       assume asmC: "C \<in> (odd_comps_in_diff E X)"
       have "\<exists>x y. x \<in> C \<and> y \<in> X \<and> {x, y} \<in> E" 
-        using "less.prems"(2) "less.prems"(2) asmC X_barr Tutte_theorem3.odd_comps_in_diff_connected 
+        using "less.prems"(2) "less.prems"(2) asmC X_barr Tutte_theorem.odd_comps_in_diff_connected 
                less.prems(1) by metis 
       then obtain x y where xy:"x \<in> C \<and> y \<in> X \<and> {x, y} \<in> E"
         by auto
