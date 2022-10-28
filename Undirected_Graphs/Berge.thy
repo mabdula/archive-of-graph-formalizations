@@ -65,6 +65,8 @@ inductive path where
   path2: "{v,v'} \<in> X \<Longrightarrow> path (v'#vs) \<Longrightarrow> path (v#v'#vs)"
 end
 
+value[nbe] "path {{1::nat, 2}, {2, 3}, {3, 4}} [1, 4, 3] = True"
+
 declare path0[simp]
 
 inductive_simps path_1[simp]: "path X [v]"
@@ -1960,7 +1962,7 @@ proof-
   moreover have "card ((E \<oplus> E') \<inter> E') = card (E' - E)" unfolding symmetric_diff_def
     by (metis Diff_disjoint Int_Un_distrib2 Un_Diff_Int inf_sup_absorb sup_bot.right_neutral)
   ultimately show "card ((E \<oplus> E') \<inter> E) < card ((E \<oplus> E') \<inter> E')"
-    by (metis assms card_infinite card_less_sym_Diff not_less_zero)
+    by (metis assms card.infinite card_less_sym_Diff not_less_zero)
 qed
 
 lemma one_unbalanced_comp_edges:
@@ -1991,7 +1993,7 @@ lemma matchings_in_diff:
 proof-
   have sym_def: "x \<in> M \<oplus> M' \<Longrightarrow> x \<in> M \<or> x \<in> M' \<and> (x \<in> M \<longrightarrow> x \<notin> M') \<and> (x \<in> M' \<longrightarrow> x \<notin> M)" for x
     unfolding symmetric_diff_def by blast
-  have aneqc: "{a, b} \<noteq> {b, c}" using assms(5) by (metis doubleton_eq_iff)
+  have aneqc: "{a, b} \<noteq> {b, c}" using assms(5)by (metis doubleton_eq_iff)
   hence notbothM: "\<not> ({a, b} \<in> M \<and> {b, c} \<in> M)" using assms(1) unfolding matching_def by fast
   from aneqc
   have notbothM': "\<not> ({a, b} \<in> M' \<and> {b, c} \<in> M')" using assms(2) unfolding matching_def by fast
@@ -2179,7 +2181,7 @@ next
         moreover have vpath_hd_neq_last: "hd vs \<noteq> last vs"
           unfolding vs_def
           using comp_ge_2 comp_works
-          by (metis One_nat_def Suc_1 Suc_le_eq card.insert card_empty distinct.simps(2) empty_set finite.emptyI last_ConsR last_in_set lessI list.exhaust_sel list.simps(15) not_less_iff_gr_or_eq)
+          by (metis One_nat_def Suc_1 Suc_le_eq card.insert card.empty distinct.simps(2) empty_set finite.emptyI last_ConsR last_in_set lessI list.exhaust_sel list.simps(15) not_less_iff_gr_or_eq)
         ultimately have e: "e = {hd vs, last vs}"
           using doubleton_edges component_edges_subset ass(1)
           by fastforce
@@ -2201,8 +2203,8 @@ next
             have "distinct (edges_of_path vs')"
               unfolding vs'_def vs_def
               using comp_works
-                ass(2)
-              by (metis (no_types, hide_lams) One_nat_def Suc_1 Suc_le_eq card_empty comp_ge_2 distinct.simps(2) distinct_edges_of_vpath e edges_of_path.simps(3) empty_set insert_commute lessI list.exhaust_sel not_less_iff_gr_or_eq vs_def)
+                ass(2) 
+              by (smt (verit, ccfv_SIG) distinct.simps(2) distinct_edges_of_vpath e edges_of_path.elims insert_commute list.distinct(1) list.inject list.sel(1) vs_def)
             then have "length (filter (\<lambda>x. x \<in> N) (edges_of_path vs')) = card (N \<inter> (component_edges (M \<oplus> M') C))" for N
               using *
               by (simp add: distinct_length_filter)
@@ -2264,9 +2266,11 @@ next
               using comp_ge_2 by auto
             done
           moreover have "last vs' \<in> hd (edges_of_path vs') \<and> last vs' \<in> last (edges_of_path vs')"
-            by (metis (no_types, hide_lams) Nitpick.size_list_simp(2) One_nat_def Suc_1 Suc_le_eq
-                Suc_le_length_iff eq_iff hd_v_in_hd_e last.simps last_v_in_last_e length_0_conv
-                list.sel(1) list.sel(3) list.simps(3) nat_le_linear not_less_eq_eq vs'_def vs_ge2)
+            by (smt (verit) One_nat_def Suc_pred calculation(2) edges_of_path.elims 
+                edges_of_path_index edges_of_path_length hd_Nil_eq_last insertCI last_ConsR
+                last_conv_nth length_pos_if_in_set lessI list.sel(1) list.set_sel(1) list.simps(3)
+                vpath_hd_neq_last vs'_def)
+            
           ultimately have "degree M (last vs') \<ge> 2"
             by (metis Suc_le_length_iff edges_are_Vs edges_of_path.simps(3) last.simps list.sel(1)
                 matching_def2 matchings(2) numeral_2_eq_2 vs'_def vs_ge2)
@@ -2562,8 +2566,8 @@ proof-
     have "hd vs \<notin> Vs M"
     proof(rule ccontr)
       obtain u v vs' where uv: "vs = u # v # vs'"
-        using ass
-        by (metis (no_types, hide_lams) card_empty edges_of_path.cases edges_of_path.simps(1) edges_of_path.simps(2) inf_bot_right list.set(1) more_M'_edges nat_neq_iff)
+        using ass 
+        by (metis edges_of_path.elims inf_bot_right list.set(1) more_M'_edges order_less_irrefl)
       assume "\<not> hd vs \<notin> Vs M"
       then have "hd vs \<in> Vs M" by simp
       then obtain w e where we: "e = {w, u}" "e \<in> M"
@@ -2633,8 +2637,8 @@ proof-
       subgoal by(simp add: edges_of_path_rev[symmetric] comp_edges_contained)
       done
     then show ?thesis
-      using hd_rev
-      by (metis comp_edges_contained edges_of_path.simps(1) empty_set inf_bot_right more_M'_edges not_less_iff_gr_or_eq vs_def)
+      using hd_rev 
+      by metis 
   qed
   moreover have "2 \<le> length (component_path' (M \<oplus> M') C)"
     using component_path'_works(2,3)[OF finite_bla con_comp deg_le_2 doubleton_edges(1)]
@@ -2841,7 +2845,7 @@ proof-
   also have "... < card (t - s) + card (s - t)"
     by (simp add: assms(1) inf.commute)
   also have "... = card ((t - s) \<union> (s - t))"
-    by (metis assms card_Un_disjoint card_infinite finite_Diff not_less_zero tsstinter)
+    by (metis assms card_Un_disjoint card.infinite finite_Diff not_less_zero tsstinter)
   also have "... = card (t \<oplus> s)" unfolding symmetric_diff_def by simp
   finally show ?thesis .
 qed
@@ -2922,7 +2926,7 @@ next
   then obtain M' where M': "M' \<subseteq> E" "matching M'" "card M < card M'"
     by blast
   then have finiteM': "finite M'"
-    using card_infinite by force
+    using card.infinite by force
   have MM'_subset: "M \<oplus> M' \<subseteq> E"
     using sym_diff_subset matching(3) M'(1) by fast
   have "\<forall>e \<in> M \<oplus> M'. \<exists>u v. e = {u,v} \<and> u \<noteq> v"
